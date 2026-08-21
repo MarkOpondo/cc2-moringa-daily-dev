@@ -9,6 +9,7 @@ export default function ProfilePage() {
     bio: '',
     skills: '',
     github_url: '',
+    interests: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,6 +26,7 @@ export default function ProfilePage() {
           bio: data.bio || '',
           skills: data.skills || '',
           github_url: data.github_url || '',
+          interests: data.interests || '',
         });
       } catch (err) {
         setStatusMsg({ type: 'error', text: err.message });
@@ -44,6 +46,7 @@ export default function ProfilePage() {
         bio: profile.bio,
         skills: profile.skills,
         github_url: profile.github_url,
+        interests: profile.interests,
       });
       setStatusMsg({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditing(false);
@@ -59,15 +62,15 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <p className="text-slate-400 text-sm">Loading profile...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6 w-full">
-      <div className="max-w-3xl mx-auto">
+    <div className="w-full">
+      <div className="max-w-2xl">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-amber-500">Developer Profile</h1>
           <button
@@ -133,6 +136,20 @@ export default function ProfilePage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs text-slate-300 mb-1">Interests</label>
+                <input
+                  type="text"
+                  value={profile.interests}
+                  onChange={(e) => setProfile({ ...profile, interests: e.target.value })}
+                  placeholder="Comma-separated, e.g. DevOps, Frontend, Career"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Used to personalize your recommended feed and subscription suggestions.
+                </p>
+              </div>
+
               <div className="flex gap-2">
                 <button
                   type="submit"
@@ -174,6 +191,24 @@ export default function ProfilePage() {
                   </a>
                 ) : (
                   <p className="text-sm text-slate-300">Not provided</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Interests</label>
+                {profile.interests ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.interests.split(',').map((tag) => tag.trim()).filter(Boolean).map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-[11px] font-mono px-2 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-300">No interests added yet.</p>
                 )}
               </div>
 

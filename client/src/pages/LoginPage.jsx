@@ -23,7 +23,14 @@ export default function LoginPage() {
     try {
       const data = await loginUser({ email, password });
       localStorage.setItem('token', data.token);
-      navigate('/dashboard');
+      // Once the backend returns user info on login (id, username, role),
+      // this stores it so the rest of the app knows who's logged in.
+      // Safe to keep even before that exists — data.user will just be
+      // undefined and this becomes a no-op until then.
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      navigate('/');
     } catch (err) {
       setErrorMsg(err.message || 'Invalid Email or Password.');
     } finally {
