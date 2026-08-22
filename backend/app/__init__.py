@@ -31,6 +31,9 @@ def create_app(config_name='development'):
     from .Routes.routes import bp
     app.register_blueprint(bp, url_prefix='/api')
 
+    with app.app_context():
+        from app import models
+
     @app.get('/')
     def index():
         return jsonify({"message": "My Moringa Daily app"})
