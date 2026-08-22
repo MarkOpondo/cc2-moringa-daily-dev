@@ -2,6 +2,7 @@ from flask import Flask, Blueprint, jsonify, request
 from app import db
 from app.models import User, Profile
 # from app.schemas import
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 
 bp=Blueprint("api", __name__)
 
