@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 content_categories = db.Table(
     'content_categories',
     db.Column('ContentID', db.Integer, db.ForeignKey('content.ContentID'), primary_key=True),
-    db.Column('CategoryID', db.Integer, db.ForeignKey('category.CategoryID'), primary_key=True)
+    db.Column('CategoryID', db.Integer, db.ForeignKey('categories.CategoryID'), primary_key=True)
 )
 
 class User(db.Model):
