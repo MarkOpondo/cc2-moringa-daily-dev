@@ -1,7 +1,7 @@
-from Flask import flask, Blueprint, jsonify, request
+from flask import Flask, Blueprint, jsonify, request
 from app import db
-from app.models import
-from app.schemas import
+from app.models import User, Profile
+# from app.schemas import
 
 bp=Blueprint("api", __name__)
 
@@ -79,7 +79,7 @@ def login():
         "message": "Login successful"
     }),200
 
-@app.post("api/auth/logout")
+@bp.post("api/auth/logout")
 def logout():
     return jsonify({
         "message": "Logout successful"
