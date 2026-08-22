@@ -17,6 +17,7 @@ flask-marshmallow = "*"
 sqlalchemy = "*"
 flask-jwt-extended = "*"
 psycopg2-binary = "*"
+marshmallow-sqlalchemy = "*"
 
 [dev-packages]
 
