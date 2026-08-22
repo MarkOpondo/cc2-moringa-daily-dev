@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "c06af96273a8535439e5865efa0d61fe1462bbf8df52d6f3ecae0df0bacc6a8b"
+            "sha256": "b74b310385847d1c4a9276d5218397bb126895b83fda7ce4ad409ae8100ee697"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -141,6 +141,24 @@
             ],
             "index": "pypi",
             "version": "==1.0.1"
+        },
+        "flask-jwt-extended": {
+            "hashes": [
+                "sha256:78fd0f460317facf3a0084a6457ffaf2f1dda9eefbd576f94cea35b0eadd5531",
+                "sha256:daad1981117f4972d63c363d013f290de307aad781a935921b603b714817393c"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.10' and python_version < '4'",
+            "version": "==4.7.4"
+        },
+        "flask-marshmallow": {
+            "hashes": [
+                "sha256:7c06b56e41647eccdb3cd57c25b109f19191b4c62509362bd64920cdf601a066",
+                "sha256:99951c77e5654111ed733811c6dc9310bfb4c3688c78a9e76f80b5ae0b2279a6"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.10'",
+            "version": "==1.5.0"
         },
         "flask-migrate": {
             "hashes": [
@@ -413,6 +431,14 @@
             "markers": "python_version >= '3.9'",
             "version": "==2.21.0"
         },
+        "pyjwt": {
+            "hashes": [
+                "sha256:41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423",
+                "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728"
+            ],
+            "markers": "python_version >= '3.9'",
+            "version": "==2.13.0"
+        },
         "pytest": {
             "hashes": [
                 "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313",
@@ -492,6 +518,7 @@
                 "sha256:f2b09029ef6f260409eefa5dc2b8276f6c3d7b892bfb50d50e8f852257d4a6b4",
                 "sha256:f4d4f7afc682961dc567db70e00a7b5bd81ccd3743c46199b0257f0744902dde"
             ],
+            "index": "pypi",
             "markers": "python_version >= '3.7'",
             "version": "==2.0.52"
         },
