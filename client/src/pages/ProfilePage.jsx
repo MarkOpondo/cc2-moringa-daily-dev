@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchProfile, updateProfile } from '../services/profileApi';
 
 export default function ProfilePage() {
+  // hold user profile info in state
   const [profile, setProfile] = useState({
     username: '',
     email: '',
@@ -11,11 +12,13 @@ export default function ProfilePage() {
     github_url: '',
     interests: '',
   });
+  
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
   const navigate = useNavigate();
 
+  // grab user profile data when page loads
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -38,6 +41,7 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
+  // save updated profile info to backend
   const handleSave = async (e) => {
     e.preventDefault();
     setStatusMsg({ type: '', text: '' });
@@ -55,6 +59,7 @@ export default function ProfilePage() {
     }
   };
 
+  // clear token and send user back to login
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -69,8 +74,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="w-full">
-      <div className="max-w-2xl">
+    <div className="min-h-screen bg-slate-950 text-white p-6 w-full">
+      <div className="max-w-3xl mx-auto">
+        
+        {/* page header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-amber-500">Developer Profile</h1>
           <button
@@ -81,6 +88,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
+        {/* error or success alert banner */}
         {statusMsg.text && (
           <div
             className={`mb-4 p-3 rounded-lg text-xs text-center border ${
@@ -93,6 +101,7 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* main profile card */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
           <div>
             <label className="block text-xs text-slate-400">Username</label>
@@ -104,6 +113,7 @@ export default function ProfilePage() {
             <p className="text-base font-semibold text-slate-200">{profile.email}</p>
           </div>
 
+          {/* toggle between view mode and edit form */}
           {isEditing ? (
             <form onSubmit={handleSave} className="space-y-4 pt-2">
               <div>
@@ -123,6 +133,7 @@ export default function ProfilePage() {
                   value={profile.skills}
                   onChange={(e) => setProfile({ ...profile, skills: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                  placeholder="e.g. React, Node, Python"
                 />
               </div>
 
@@ -133,6 +144,7 @@ export default function ProfilePage() {
                   value={profile.github_url}
                   onChange={(e) => setProfile({ ...profile, github_url: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                  placeholder="https://github.com/username"
                 />
               </div>
 

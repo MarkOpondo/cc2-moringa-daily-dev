@@ -1,7 +1,8 @@
 const API_URL = 'http://localhost:5000/api/auth';
 
+// register a new user
 export async function signUpUser(userData) {
-  const response = await fetch(`${API_URL}/signup`, {
+  const response = await fetch(`${API_URL}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(userData)
@@ -11,6 +12,7 @@ export async function signUpUser(userData) {
   return data;
 }
 
+// log an existing user in
 export async function loginUser(credentials) {
   const response = await fetch(`${API_URL}/login`, {
     method: 'POST',
