@@ -8,6 +8,8 @@ export default function ProfilePage() {
     username: '',
     email: '',
     bio: '',
+    skills: '',
+    github_url: '',
     interests: '',
   });
   
@@ -25,6 +27,8 @@ export default function ProfilePage() {
           username: data.username || '',
           email: data.email || '',
           bio: data.bio || '',
+          skills: data.skills || '',
+          github_url: data.github_url || '',
           interests: data.interests || '',
         });
       } catch (err) {
@@ -44,6 +48,8 @@ export default function ProfilePage() {
     try {
       await updateProfile({
         bio: profile.bio,
+        skills: profile.skills,
+        github_url: profile.github_url,
         interests: profile.interests,
       });
       setStatusMsg({ type: 'success', text: 'Profile updated successfully!' });
@@ -61,7 +67,7 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <p className="text-slate-400 text-sm">Loading profile...</p>
       </div>
     );
@@ -121,14 +127,39 @@ export default function ProfilePage() {
               </div>
 
               <div>
+                <label className="block text-xs text-slate-300 mb-1">Skills / Tech Stack</label>
+                <input
+                  type="text"
+                  value={profile.skills}
+                  onChange={(e) => setProfile({ ...profile, skills: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                  placeholder="e.g. React, Node, Python"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-300 mb-1">GitHub Profile URL</label>
+                <input
+                  type="url"
+                  value={profile.github_url}
+                  onChange={(e) => setProfile({ ...profile, github_url: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                  placeholder="https://github.com/username"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs text-slate-300 mb-1">Interests</label>
                 <input
                   type="text"
                   value={profile.interests}
                   onChange={(e) => setProfile({ ...profile, interests: e.target.value })}
+                  placeholder="Comma-separated, e.g. DevOps, Frontend, Career"
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
-                  placeholder="e.g. Web Development, Cloud, AI"
                 />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Used to personalize your recommended feed and subscription suggestions.
+                </p>
               </div>
 
               <div className="flex gap-2">
@@ -155,8 +186,42 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400">Interests</label>
-                <p className="text-sm text-slate-300">{profile.interests || 'No interests listed yet.'}</p>
+                <label className="block text-xs text-slate-400">Skills</label>
+                <p className="text-sm text-slate-300">{profile.skills || 'No skills listed yet.'}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400">GitHub</label>
+                {profile.github_url ? (
+                  <a
+                    href={profile.github_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-amber-500 hover:underline"
+                  >
+                    {profile.github_url}
+                  </a>
+                ) : (
+                  <p className="text-sm text-slate-300">Not provided</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Interests</label>
+                {profile.interests ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.interests.split(',').map((tag) => tag.trim()).filter(Boolean).map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-[11px] font-mono px-2 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-300">No interests added yet.</p>
+                )}
               </div>
 
               <button
