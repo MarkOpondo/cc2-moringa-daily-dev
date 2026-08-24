@@ -31,7 +31,8 @@ def test_get_categories(client):
     assert response.status_code == 200
     data = response.get_json()
     assert len(data) == 1
-    assert data[0]['name'] == 'Technology'
+    category_names = [cat['name'] for cat in data]
+    assert 'Technology' in category_names
 
 def test_get_content(client):
     response = client.get('/api/content')
