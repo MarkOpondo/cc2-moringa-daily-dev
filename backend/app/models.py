@@ -1,4 +1,5 @@
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import CheckConstraint, UniqueConstraint, Index
 from app import db, bcrypt
 
 
@@ -48,6 +49,8 @@ class User(db.Model):
 
     def authenticate(self, password):
         return bcrypt.check_password_hash(self._Password_Hash, password.encode('utf-8'))
+
+
 
 class Profile(db.Model):
     __tablename__ = 'profiles'
@@ -99,6 +102,16 @@ class Content(db.Model):
     notifications = db.relationship('Notification', backref='content', cascade="all, delete-orphan")
     reports = db.relationship('ContentReport', backref='content', cascade="all, delete-orphan")
 
+    __table_args__ = (
+        CheckConstraint(
+            "Status IN ('Draft', 'Published', 'Archived')",
+            name='check_valid_content_status'
+        ),
+        CheckConstraint(
+            "ContentType IN ('Article', 'Video', 'Audio', 'Image')",
+            name='check_valid_content_type'
+        ),
+    )
 
 class Comment(db.Model):
     __tablename__ = 'comments'
@@ -115,6 +128,13 @@ class Comment(db.Model):
     replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[CommentID]), cascade="all, delete-orphan")
     reactions = db.relationship('CommentReaction', backref='comment', cascade="all, delete-orphan")
 
+    __table_args__ = (
+        # Make sure a child comment doesnt have the same id as the parent comment
+        CheckConstraint('CommentID != ParentCommentID', name='check_no_self_parenting_comment'),
+        # Reject empty entries
+        CheckConstraint("length(trim(Text)) > 0", name='check_comment_not_empty')
+    )
+
 
 class ContentReaction(db.Model):
     __tablename__ = 'content_reactions'
@@ -125,6 +145,12 @@ class ContentReaction(db.Model):
     Reaction = db.Column(db.String(50), nullable=False)
     CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+    __table_args__ = (
+        # Prevent a single user from leaving multiple reactions on one content
+        UniqueConstraint('UserId', 'ContentID', name='unique_user_content_reaction'),
+        # Speed up query counting reaction
+        Index('ix_content_reaction_lookup', 'ContentID', 'Reaction'),
+    )
 
 class CommentReaction(db.Model):
     __tablename__ = 'comment_reactions'
@@ -135,6 +161,12 @@ class CommentReaction(db.Model):
     Reaction = db.Column(db.String(50), nullable=False)
     CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+    __table_args__ = (
+        # Prevent a single user from leaving multiple reactions on one comment
+        UniqueConstraint('UserId', 'CommentID', name='unique_user_commentt_reaction'),
+        # Speed up query counting reaction
+        Index('ix_content_reaction_lookup', 'CommentID', 'Reaction'),
+    )
 
 class Subscription(db.Model):
     __tablename__ = 'subscriptions'
