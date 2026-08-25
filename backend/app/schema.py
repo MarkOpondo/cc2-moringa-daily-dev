@@ -99,3 +99,29 @@ class ContentReportSchema(SQLAlchemyAutoSchema):
         load_instance = True
         sqla_session = db.session
         include_fk = True
+
+
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+profile_schema = ProfileSchema()
+profiles_schema = ProfileSchema(many=True)
+category_schema = CategorySchema()
+categories_schema = CategorySchema(many=True)
+content_schema = ContentSchema()
+contents_schema = ContentSchema(many=True)
+comment_schema = CommentSchema()
+comments_schema = CommentSchema(many=True)
+content_reaction_schema = ContentReactionSchema()
+content_reactions_schema = ContentReactionSchema(many=True)
+comment_reaction_schema = CommentReactionSchema()
+comment_reactions_schema = CommentReactionSchema(many=True)
+subscription_schema = SubscriptionSchema()
+subscriptions_schema = SubscriptionSchema(many=True)
+wishlist_schema = WishlistSchema()
+wishlists_schema = WishlistSchema(many=True)
+share_schema = ShareSchema()
+shares_schema = ShareSchema(many=True)
+notification_schema = NotificationSchema()
+notifications_schema = NotificationSchema(many=True)
+content_report_schema = ContentReportSchema()
+content_reports_schema = ContentReportSchema(many=True)
