@@ -147,7 +147,7 @@ class ContentReaction(db.Model):
 
     __table_args__ = (
         # Prevent a single user from leaving multiple reactions on one content
-        UniqueConstraint('UserId', 'ContentID', name='unique_user_content_reaction'),
+        UniqueConstraint('UserID', 'ContentID', name='unique_user_content_reaction'),
         # Speed up query counting reaction
         Index('ix_content_reaction_lookup', 'ContentID', 'Reaction'),
     )
@@ -163,7 +163,7 @@ class CommentReaction(db.Model):
 
     __table_args__ = (
         # Prevent a single user from leaving multiple reactions on one comment
-        UniqueConstraint('UserId', 'CommentID', name='unique_user_commentt_reaction'),
+        UniqueConstraint('UserID', 'CommentID', name='unique_user_commentt_reaction'),
         # Speed up query counting reaction
         Index('ix_content_reaction_lookup', 'CommentID', 'Reaction'),
     )
