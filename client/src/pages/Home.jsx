@@ -25,26 +25,20 @@ export default function Home() {
   }, [activeCategory, search]);
 
   const recommended = !search && !activeCategory
-    ? items.filter((i) => subscribedIds.includes(i.categoryId)).slice(0, 3)
+    ? items.filter((i) => subscribedIds.includes(i.categoryId)).slice(0, 2)
     : [];
   const feedItems = recommended.length ? items.filter((i) => !recommended.includes(i)) : items;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-xs font-mono text-amber-500 mb-1">// feed</p>
-        <h1 className="text-2xl font-bold text-white">
-          {search ? `Results for "${search}"` : "What the community's sharing"}
-        </h1>
-      </div>
-
-      <div className="flex gap-2 flex-wrap">
+    <div className="space-y-6">
+      {/* Horizontal category tabs, underline-style with the active tab in green */}
+      <div className="flex items-center gap-6 overflow-x-auto border-b border-navy-border -mx-1 px-1">
         <button
           onClick={() => setActiveCategory(null)}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+          className={`shrink-0 pb-3 text-sm font-medium border-b-2 -mb-px transition ${
             !activeCategory
-              ? "bg-amber-500 text-slate-950 border-amber-500"
-              : "border-slate-800 text-slate-400 hover:border-slate-700"
+              ? "border-brand-500 text-brand-600"
+              : "border-transparent text-slate-400 hover:text-cream"
           }`}
         >
           All
@@ -53,10 +47,10 @@ export default function Home() {
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+            className={`shrink-0 pb-3 text-sm font-medium border-b-2 -mb-px transition ${
               activeCategory === cat.id
-                ? "bg-amber-500 text-slate-950 border-amber-500"
-                : "border-slate-800 text-slate-400 hover:border-slate-700"
+                ? "border-brand-500 text-brand-600"
+                : "border-transparent text-slate-400 hover:text-cream"
             }`}
           >
             {cat.name}
@@ -65,8 +59,8 @@ export default function Home() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
+        <div className="grid sm:grid-cols-2 gap-5">
+          {[1, 2, 3, 4].map((i) => (
             <ContentCardSkeleton key={i} />
           ))}
         </div>
@@ -80,8 +74,8 @@ export default function Home() {
         <div className="space-y-8">
           {recommended.length > 0 && (
             <section className="space-y-3">
-              <p className="text-xs font-mono text-slate-500">// recommended for you, based on your subscriptions</p>
-              <div className="space-y-3">
+              <p className="text-xs font-medium text-slate-400">Recommended for you</p>
+              <div className="grid sm:grid-cols-2 gap-5">
                 {recommended.map((item) => (
                   <ContentCard key={item.id} item={item} />
                 ))}
@@ -89,8 +83,7 @@ export default function Home() {
             </section>
           )}
           <section className="space-y-3">
-            {recommended.length > 0 && <p className="text-xs font-mono text-slate-500">// everything else</p>}
-            <div className="space-y-3">
+            <div className="grid sm:grid-cols-2 gap-5">
               {feedItems.map((item) => (
                 <ContentCard key={item.id} item={item} />
               ))}

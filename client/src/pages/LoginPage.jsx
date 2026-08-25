@@ -40,7 +40,7 @@ export default function LoginPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-center text-white">Welcome Back</h2>
+      <h2 className="text-2xl font-bold text-center text-cream">Welcome Back</h2>
       <p className="text-xs text-slate-400 text-center mt-1">Log in to Moringa Daily Dev to continue.</p>
 
       {errorMsg && (
@@ -57,14 +57,14 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="student@moringa.com"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm focus:outline-none focus:border-amber-500 text-white"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
           />
         </div>
 
         <div>
           <div className="flex justify-between items-center mb-1">
             <label className="block text-xs font-medium text-slate-300">Password</label>
-            <Link to="/forgot-password" className="text-[11px] text-amber-500 hover:underline">
+            <Link to="/forgot-password" className="text-[11px] text-brand-500 hover:underline">
               Forgot password?
             </Link>
           </div>
@@ -75,13 +75,13 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-slate-950 border border-slate-800 text-sm focus:outline-none focus:border-amber-500 text-white"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
             />
             
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cream transition"
               title={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
@@ -96,7 +96,7 @@ export default function LoginPage() {
         <button 
           type="submit" 
           disabled={isLoading}
-          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-lg transition duration-200 disabled:opacity-50"
+          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold rounded-lg transition duration-200 disabled:opacity-50"
         >
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
@@ -104,7 +104,7 @@ export default function LoginPage() {
 
       <p className="text-xs text-center text-slate-400 mt-6">
         Don't have an account?{' '}
-        <Link to="/signup" className="text-amber-500 font-semibold hover:underline">
+        <Link to="/signup" className="text-brand-500 font-semibold hover:underline">
           Sign up
         </Link>
       </p>
