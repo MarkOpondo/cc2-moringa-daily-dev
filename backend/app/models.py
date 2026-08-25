@@ -1,4 +1,6 @@
+from sqlalchemy.ext.hybrid import hybrid_property
 from app import db, bcrypt
+
 
 from datetime import datetime, timezone
 
@@ -17,7 +19,7 @@ class User(db.Model):
     _Password_Hash = db.Column(db.String, nullable=False)
     Role = db.Column(db.String(50), nullable=True)
     IsActive = db.Column(db.Boolean, default=True)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     profile = db.relationship('Profile', backref='user', uselist=False, cascade='all, delete-orphan')
     categories_created = db.relationship('Category', backref='creator', foreign_keys='Category.CreatedBy')
@@ -35,7 +37,18 @@ class User(db.Model):
     reports_submitted = db.relationship('ContentReport', backref='reporter')
 
 
+    @hybrid_property
+    def password_hash(self):
+        raise AttributeError("Password hashes may not be viewed")
     
+    @password_hash.setter
+    def password_hash(self, password):
+        password_hash = bcrypt.generate_password_hash(password.encode('utf-8'))
+        self._Password_Hash = password_hash.decode('utf-8')
+
+    def authenticate(self, password):
+        return bcrypt.check_password_hash(self._Password_Hash, password.encode('utf-8'))
+
 class Profile(db.Model):
     __tablename__ = 'profiles'
 
@@ -44,8 +57,8 @@ class Profile(db.Model):
     Bio = db.Column(db.Text, nullable=True)
     ProfileImage = db.Column(db.String(255), nullable=True)
     Interests = db.Column(db.Text, nullable=True)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    UpdatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    UpdatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Category(db.Model):
@@ -55,7 +68,7 @@ class Category(db.Model):
     Name = db.Column(db.String(100), unique=True, nullable=False)
     Description = db.Column(db.Text, nullable=True)
     CreatedBy = db.Column(db.Integer, db.ForeignKey('users.UserID'), nullable=True)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationship to get subscriptions for this category
     subscribers = db.relationship('Subscription', backref='category')
@@ -72,8 +85,8 @@ class Content(db.Model):
     ContentURL = db.Column(db.String(255), nullable=True)
     Status = db.Column(db.String(50), nullable=True)
     IsApproved = db.Column(db.Boolean, default=False)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    UpdatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    UpdatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Many-to-Many Relationship with Category
     categories = db.relationship('Category', secondary=content_categories, backref=db.backref('contents', lazy='dynamic'))
@@ -95,8 +108,8 @@ class Comment(db.Model):
     ContentID = db.Column(db.Integer, db.ForeignKey('content.ContentID'), nullable=False)
     ParentCommentID = db.Column(db.Integer, db.ForeignKey('comments.CommentID'), nullable=True)
     Text = db.Column(db.Text, nullable=False)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    UpdatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    UpdatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Self-referential relationship for nested parent/child replies
     replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[CommentID]), cascade="all, delete-orphan")
@@ -110,7 +123,7 @@ class ContentReaction(db.Model):
     UserID = db.Column(db.Integer, db.ForeignKey('users.UserID'), nullable=False)
     ContentID = db.Column(db.Integer, db.ForeignKey('content.ContentID'), nullable=False)
     Reaction = db.Column(db.String(50), nullable=False)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class CommentReaction(db.Model):
@@ -120,7 +133,7 @@ class CommentReaction(db.Model):
     UserID = db.Column(db.Integer, db.ForeignKey('users.UserID'), nullable=False)
     CommentID = db.Column(db.Integer, db.ForeignKey('comments.CommentID'), nullable=False)
     Reaction = db.Column(db.String(50), nullable=False)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Subscription(db.Model):
@@ -129,7 +142,7 @@ class Subscription(db.Model):
     SubscriptionID = db.Column(db.Integer, primary_key=True, autoincrement=True)
     UserID = db.Column(db.Integer, db.ForeignKey('users.UserID'), nullable=False)
     CategoryID = db.Column(db.Integer, db.ForeignKey('categories.CategoryID'), nullable=False)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Wishlist(db.Model):
@@ -138,7 +151,7 @@ class Wishlist(db.Model):
     WishlistID = db.Column(db.Integer, primary_key=True, autoincrement=True)
     UserID = db.Column(db.Integer, db.ForeignKey('users.UserID'), nullable=False)
     ContentID = db.Column(db.Integer, db.ForeignKey('content.ContentID'), nullable=False)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Share(db.Model):
@@ -148,7 +161,7 @@ class Share(db.Model):
     UserID = db.Column(db.Integer, db.ForeignKey('users.UserID'), nullable=False)
     ContentID = db.Column(db.Integer, db.ForeignKey('content.ContentID'), nullable=False)
     SharedWithUserID = db.Column(db.Integer, db.ForeignKey('users.UserID'), nullable=False)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Notification(db.Model):
@@ -159,7 +172,7 @@ class Notification(db.Model):
     ContentID = db.Column(db.Integer, db.ForeignKey('content.ContentID'), nullable=True)
     Message = db.Column(db.Text, nullable=False)
     IsRead = db.Column(db.Boolean, default=False)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class ContentReport(db.Model):
@@ -170,4 +183,4 @@ class ContentReport(db.Model):
     ReportedBy = db.Column(db.Integer, db.ForeignKey('users.UserID'), nullable=False)
     Reason = db.Column(db.Text, nullable=False)
     Status = db.Column(db.String(50), nullable=True)
-    CreatedAt = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
