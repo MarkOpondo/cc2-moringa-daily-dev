@@ -1,21 +1,21 @@
 import { Outlet } from 'react-router-dom';
+import StudentIllustration from '../components/illustrations/StudentIllustration';
 
 export default function AuthLayout() {
   return (
     <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-slate-950 text-slate-100">
       
-      {/* LEFT COLUMN: App Info & Branding */}
+      {/* LEFT COLUMN: Illustration + light branding */}
       <div className="hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-950 border-r border-slate-800/80">
-        <div className="max-w-md my-auto space-y-6">
-          <span className="text-amber-500 font-semibold text-xs tracking-wider uppercase bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-            Moringa Daily Dev
-          </span>
-          <h1 className="text-4xl font-extrabold tracking-tight leading-tight text-white">
-            Build, track, and showcase your daily developer journey.
+        <span className="text-amber-500 font-semibold text-xs tracking-wider uppercase bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 w-fit">
+          Moringa Daily Dev
+        </span>
+
+        <div className="my-auto -mt-8">
+          <StudentIllustration className="w-full max-w-sm mx-auto" />
+          <h1 className="text-2xl font-display font-bold text-center text-white mt-6">
+            Learn out loud, together.
           </h1>
-          <p className="text-slate-400 text-base leading-relaxed">
-            Connect with technical mentors, collaborate on peer projects, and maintain continuous learning habits inside one unified workspace.
-          </p>
         </div>
 
         <p className="text-xs text-slate-600">

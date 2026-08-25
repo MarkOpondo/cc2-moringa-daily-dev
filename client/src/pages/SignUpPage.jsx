@@ -61,7 +61,10 @@ export default function SignUpPage() {
     try {
       const data = await signUpUser({ username, email, password });
       localStorage.setItem('token', data.token);
-      navigate('/dashboard');
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      navigate('/');
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
