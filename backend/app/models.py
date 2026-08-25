@@ -34,6 +34,8 @@ class User(db.Model):
     notifications = db.relationship('Notification', backref='user')
     reports_submitted = db.relationship('ContentReport', backref='reporter')
 
+
+    
 class Profile(db.Model):
     __tablename__ = 'profiles'
 
