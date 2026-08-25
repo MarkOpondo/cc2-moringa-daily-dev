@@ -25,7 +25,9 @@ export default function ContentCard({ item, commentCount }) {
           </span>
           <span className="text-slate-700">·</span>
           <TypeIcon className="w-3 h-3 text-slate-500" strokeWidth={1.75} />
-          <span className="text-[11px] text-slate-500 capitalize">{item.type}</span>
+          <span className="text-[11px] text-slate-500">
+            {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : ""}
+          </span>
           {item.status && item.status !== "approved" && (
             <span className="text-[10px] font-mono uppercase text-amber-500 border border-amber-500/30 rounded px-1.5 py-0.5 ml-auto">
               {item.status}
@@ -46,6 +48,18 @@ export default function ContentCard({ item, commentCount }) {
           </div>
           <span>·</span>
           <span>{timeAgo(item.createdAt)}</span>
+          {(item.type === "video" || item.type === "audio") && item.duration && (
+            <>
+              <span>·</span>
+              <span>{item.duration}</span>
+            </>
+          )}
+          {item.type === "article" && item.readTime && (
+            <>
+              <span>·</span>
+              <span>{item.readTime}</span>
+            </>
+          )}
           <span className="ml-auto flex items-center gap-3">
             <span className="flex items-center gap-1">
               <ThumbsUp className="w-3 h-3" /> {item.likes ?? 0}
