@@ -5,11 +5,6 @@ class Config:
         "SECRET_KEY",
          "dev-secret-key-change-in-production"
     )
-    
-    SQLALCHEMY_DATABASE_URI=os.environ.get(
-        'DATABASE_URL',
-        "postgresql://postgres:postgres@localhost:5432/moringa_daily_dev"
-    )
 
     JWT_SECRET_KEY=os.environ.get(
         "JWT_SECRET_KEY", 
@@ -24,7 +19,7 @@ class DevelopmentConfig(Config):
     debug=True
      SQLALCHEMY_DATABASE_URI=os.environ.get(
         'DATABASE_URL',
-        "postgresql://postgres:postgres@localhost:5432/moringa_daily_dev"
+        "postgresql://postgres:postgres@localhost:5432/tech-space"
     )
 
 config_by_name = {
