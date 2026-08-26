@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Bookmark } from "lucide-react";
-import { listWishlist } from "../services/contentApi";
+import { listWishlist } from "../services/wishlistApi";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import ContentCard from "../components/content/ContentCard";
 import { ContentCardSkeleton } from "../components/ui/Skeleton";
@@ -15,12 +15,18 @@ export default function Wishlist() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
-    listWishlist(user.id).then((data) => {
+  if (!user?.id) return;
+
+  listWishlist()
+    .then((data) => {
       setItems(data);
       setLoading(false);
+    })
+    .catch(() => {
+      setItems([]);
+      setLoading(false);
     });
-  }, [user?.id]);
+}, [user?.id]);
 
   return (
     <div className="space-y-6">

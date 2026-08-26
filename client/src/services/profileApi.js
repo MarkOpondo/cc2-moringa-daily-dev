@@ -1,48 +1,24 @@
-// get auth token from local storage
-const getToken = () => localStorage.getItem('token');
+import apiRequest from "./api";
 
-// fetch current user profile data from the backend
-export const fetchProfile = async () => {
-  const token = getToken();
-  
-  const response = await fetch('/api/users/me', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+export async function getProfile() {
+  return apiRequest("/api/profiles/me");
+}
 
-  const data = await response.json();
+export async function fetchProfile() {
+  return getProfile();
+}
 
-  if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch profile');
-  }
-
-  return data;
-};
-
-// send updated profile details to the backend
-export const updateProfile = async (profileData) => {
-  const token = getToken();
-
-  const response = await fetch('/api/users/me', {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+export async function updateProfile({
+  bio,
+  interests,
+  profileImage,
+}) {
+  return apiRequest("/api/profiles/me", {
+    method: "PUT",
     body: JSON.stringify({
-      bio: profileData.bio,
-      interests: profileData.interests,
+      bio,
+      interests,
+      profile_image: profileImage,
     }),
   });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || 'Failed to update profile');
-  }
-
-  return data;
-};
+}

@@ -1,36 +1,31 @@
-import { categories, subscriptions, content, genId, delay } from "./mockData";
+import apiRequest from "./api";
 
-// Maps to: GET /api/categories
 export async function listCategories() {
-  await delay(200);
-  return categories.map((cat) => ({
-    ...cat,
-    contentCount: content.filter((c) => c.categoryId === cat.id && c.status === "approved").length,
-  }));
+  return apiRequest("/api/categories");
 }
 
-// Maps to: GET /api/users/me/subscriptions
-export async function listSubscriptions(userId) {
-  await delay(200);
-  return subscriptions.filter((s) => s.userId === userId).map((s) => s.categoryId);
+export async function createCategory({ name, description }) {
+  return apiRequest("/api/categories", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      description,
+    }),
+  });
 }
 
-// Maps to: POST /api/subscriptions  /  DELETE /api/subscriptions/:id
-export async function toggleSubscription(categoryId, userId) {
-  await delay(150);
-  const idx = subscriptions.findIndex((s) => s.categoryId === categoryId && s.userId === userId);
-  if (idx >= 0) {
-    subscriptions.splice(idx, 1);
-    return false;
-  }
-  subscriptions.push({ id: genId(), userId, categoryId });
-  return true;
+export async function updateCategory(id, { name, description }) {
+  return apiRequest(`/api/categories/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      name,
+      description,
+    }),
+  });
 }
 
-// Maps to: POST /api/categories  (admin / tech writer)
-export async function createCategory({ name, description, createdBy }) {
-  await delay(300);
-  const cat = { id: genId(), name, description, createdBy };
-  categories.push(cat);
-  return cat;
+export async function deleteCategory(id) {
+  return apiRequest(`/api/categories/${id}`, {
+    method: "DELETE",
+  });
 }
