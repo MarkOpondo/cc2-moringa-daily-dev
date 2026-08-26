@@ -1,76 +1,68 @@
-const API_URL = 'http://localhost:5000/api/auth';
+import apiRequest from "./api";
 
-// Register a new user
-export async function signUpUser(userData) {
-  const response = await fetch(`${API_URL}/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(userData)
+export async function register({ username, email, password }) {
+  return apiRequest("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify({
+      username,
+      email,
+      password,
+    }),
+  });
+}
+
+export async function signUpUser({ username, email, password }) {
+  return register({ username, email, password });
+}
+
+export async function login({ username, password }) {
+  const data = await apiRequest("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({
+      username,
+      password,
+    }),
   });
 
-  const data = await response.json();
+  if (data?.token) {
+    localStorage.setItem("token", data.token);
+  }
 
-  if (!response.ok) {
-    throw new Error(data.error || data.message || 'Registration failed.');
+  if (data?.user) {
+    localStorage.setItem("user", JSON.stringify(data.user));
   }
 
   return data;
 }
 
-// Log an existing user in
-export async function loginUser(credentials) {
-  const response = await fetch(`${API_URL}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials)
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || data.message || 'Login failed.');
-  }
-
-  return data;
+export async function loginUser({ username, password }) {
+  return login({ username, password });
 }
 
-// Request a password reset
+export async function logout() {
+  try {
+    await apiRequest("/api/auth/logout", {
+      method: "POST",
+    });
+  } finally {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }
+}
+
 export async function requestPasswordReset(email) {
-  const response = await fetch(`${API_URL}/forgot-password`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email })
+  return apiRequest("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
   });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data.error || data.message || 'Password reset request failed.'
-    );
-  }
-
-  return data;
 }
 
-// Reset password
 export async function resetPassword(token, password) {
-  const response = await fetch(`${API_URL}/reset-password`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return apiRequest("/api/auth/reset-password", {
+    method: "POST",
     body: JSON.stringify({
       token,
-      password
-    })
+      password,
+    }),
   });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data.error || data.message || 'Password reset failed.'
-    );
-  }
-
-  return data;
 }

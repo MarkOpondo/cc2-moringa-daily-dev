@@ -2,7 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { ThumbsUp, ThumbsDown, Bookmark, Share2, Flag, Video, Headphones, FileText, Check } from "lucide-react";
-import { getContent, react, reactionSummary, toggleWishlist, isWishlisted } from "../services/contentApi";
+import {
+  getContent,
+  react,
+  reactionSummary
+} from "../services/contentApi";
+
+import {
+  toggleWishlist,
+  isWishlisted
+} from "../services/wishlistApi";
 import { listComments, addComment, updateComment, deleteComment } from "../services/commentsApi";
 import { reportContent } from "../services/adminApi";
 import { selectCurrentUser } from "../features/auth/authSlice";
@@ -35,9 +44,13 @@ export default function ContentDetail() {
       if (cancelled) return;
       setItem(contentItem);
       setComments(commentTree);
-      setReactionState(reactionSummary(id, user?.id));
-      setSaved(isWishlisted(id, user?.id));
-      setLoading(false);
+      const reactionSummaryData = await reactionSummary(id);
+
+const wishlistStatus = await isWishlisted(id);
+
+setReactionState(reactionSummaryData);
+setSaved(wishlistStatus);
+setLoading(false);
     }
     load();
     return () => {
@@ -50,10 +63,10 @@ export default function ContentDetail() {
     setReactionState(summary);
   }
 
-  async function handleWishlist() {
-    const nowSaved = await toggleWishlist(id, user.id);
-    setSaved(nowSaved);
-  }
+ async function handleWishlist() {
+  const nowSaved = await toggleWishlist(id, saved);
+  setSaved(nowSaved);
+}
 
   async function handleShare() {
     try {
