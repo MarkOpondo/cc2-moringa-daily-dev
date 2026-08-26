@@ -2,9 +2,9 @@ import { useEffect } from "react";
 import { Outlet, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import Topbar from "./Topbar";
-import { selectCurrentUser } from "../../features/auth/authSlice";
-import { fetchCategories, fetchSubscriptions } from "../../features/categories/categoriesSlice";
-import { fetchNotifications } from "../../features/notifications/notificationsSlice";
+import { selectCurrentUser } from "../features/auth/authSlice";
+import { fetchCategories, fetchSubscriptions } from "../features/categories/categoriesSlice";
+import { fetchNotifications } from "../features/notifications/notificationsSlice";
 
 // Loads data every page might need (categories for filters/forms,
 // subscriptions for the "subscribed" indicator, notification count for the
