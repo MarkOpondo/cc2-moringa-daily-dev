@@ -46,9 +46,9 @@ export default function CreateContent() {
 
   return (
     <div className="max-w-2xl">
-      <p className="text-xs font-mono text-amber-500 mb-1">// new post</p>
-      <h1 className="text-2xl font-bold text-white mb-1">Share something with the community</h1>
-      <p className="text-sm text-slate-500 mb-6">
+      <p className="text-xs font-mono text-brand-500 mb-1">// new post</p>
+      <h1 className="text-2xl font-bold text-cream mb-1">Share something with the community</h1>
+      <p className="text-sm text-slate-400 mb-6">
         Posts go to a review queue before appearing in the public feed — an admin or tech writer approves it first.
       </p>
 
@@ -56,7 +56,7 @@ export default function CreateContent() {
         <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5 bg-slate-900/40 border border-slate-800 rounded-xl p-6">
+      <form onSubmit={handleSubmit} className="space-y-5 bg-navy border border-navy-border rounded-xl p-6">
         <div className="flex gap-2">
           {TYPES.map((t) => (
             <button
@@ -65,8 +65,8 @@ export default function CreateContent() {
               onClick={() => update("type", t.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
                 form.type === t.value
-                  ? "bg-amber-500 text-slate-950 border-amber-500"
-                  : "border-slate-800 text-slate-400 hover:border-slate-700"
+                  ? "bg-brand-500 text-slate-950 border-brand-500"
+                  : "border-navy-border text-slate-400 hover:border-navy-border"
               }`}
             >
               {t.label}
@@ -80,7 +80,7 @@ export default function CreateContent() {
             value={form.title}
             onChange={(e) => update("title", e.target.value)}
             placeholder="A clear, specific title"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
           />
         </div>
 
@@ -89,7 +89,7 @@ export default function CreateContent() {
           <select
             value={form.categoryId}
             onChange={(e) => update("categoryId", e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
           >
             <option value="">Select a category…</option>
             {categories.map((c) => (
@@ -107,7 +107,7 @@ export default function CreateContent() {
               value={form.mediaUrl}
               onChange={(e) => update("mediaUrl", e.target.value)}
               placeholder="https://…"
-              className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+              className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
             />
           </div>
         )}
@@ -121,7 +121,7 @@ export default function CreateContent() {
             onChange={(e) => update("body", e.target.value)}
             rows={form.type === "article" ? 10 : 4}
             placeholder={form.type === "article" ? "Write your article…" : "What's this piece about?"}
-            className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
           />
         </div>
 

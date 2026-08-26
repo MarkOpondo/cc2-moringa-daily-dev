@@ -13,6 +13,11 @@ flask-migrate = ">=4.1.0"
 flask-restful = ">=0.3.10"
 pytest = ">=7.4.0"
 flask-bcrypt = ">=1.0.1"
+flask-marshmallow = "*"
+sqlalchemy = "*"
+flask-jwt-extended = "*"
+psycopg2-binary = "*"
+marshmallow-sqlalchemy = "*"
 
 [dev-packages]
 

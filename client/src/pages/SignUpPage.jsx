@@ -74,7 +74,7 @@ export default function SignUpPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-center text-white">Create Account</h2>
+      <h2 className="text-2xl font-bold text-center text-cream">Create Account</h2>
       <p className="text-xs text-slate-400 text-center mt-1">Join Moringa Daily Dev today.</p>
 
       {errorMsg && (
@@ -91,7 +91,7 @@ export default function SignUpPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="moringa_dev"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm focus:outline-none focus:border-amber-500 text-white"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
           />
         </div>
 
@@ -102,7 +102,7 @@ export default function SignUpPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="student@moringa.com"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm focus:outline-none focus:border-amber-500 text-white"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
           />
         </div>
 
@@ -113,7 +113,7 @@ export default function SignUpPage() {
             <button 
               type="button" 
               onClick={handleAutoGenerate} 
-              className="text-[11px] text-amber-500 font-semibold hover:underline"
+              className="text-[11px] text-brand-500 font-semibold hover:underline"
             >
               Auto-Generate
             </button>
@@ -129,14 +129,14 @@ export default function SignUpPage() {
                 setShowChecklist(true);
               }}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-slate-950 border border-slate-800 text-sm focus:outline-none focus:border-amber-500 text-white"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
             />
             
             {/* Hide/Unhide Toggle Button */}
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cream transition"
               title={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
@@ -152,20 +152,20 @@ export default function SignUpPage() {
         {showChecklist && (
           <div 
             onClick={() => setShowChecklist(false)}
-            className="p-3 bg-slate-950/90 border border-slate-800 rounded-lg text-xs space-y-1.5 cursor-pointer hover:border-slate-700 transition"
+            className="p-3 bg-navy/90 border border-navy-border rounded-lg text-xs space-y-1.5 cursor-pointer hover:border-navy-border transition"
             title="Click anywhere inside to dismiss"
           >
             <div className="flex justify-between items-center text-slate-400 font-medium mb-1">
               <span>Your password must contain:</span>
-              <span className="text-[10px] text-slate-500">(Click box to dismiss)</span>
+              <span className="text-[10px] text-slate-400">(Click box to dismiss)</span>
             </div>
             
-            <div className={`flex items-center space-x-2 ${hasMinLength ? 'text-emerald-400' : 'text-slate-500'}`}>
+            <div className={`flex items-center space-x-2 ${hasMinLength ? 'text-emerald-400' : 'text-slate-400'}`}>
               <span>{hasMinLength ? '✓' : '•'}</span>
               <span>At least 8 characters</span>
             </div>
 
-            <div className={`flex items-center space-x-2 ${(hasLower && hasUpper && hasNumber && hasSpecial) ? 'text-emerald-400' : 'text-slate-500'}`}>
+            <div className={`flex items-center space-x-2 ${(hasLower && hasUpper && hasNumber && hasSpecial) ? 'text-emerald-400' : 'text-slate-400'}`}>
               <span>{(hasLower && hasUpper && hasNumber && hasSpecial) ? '✓' : '•'}</span>
               <span>Includes lowercase, uppercase, number, & special char</span>
             </div>
@@ -181,13 +181,13 @@ export default function SignUpPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-slate-950 border border-slate-800 text-sm focus:outline-none focus:border-amber-500 text-white"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
             />
             
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cream transition"
               title={showConfirmPassword ? "Hide password" : "Show password"}
             >
               {showConfirmPassword ? (
@@ -202,7 +202,7 @@ export default function SignUpPage() {
         <button 
           type="submit" 
           disabled={isLoading}
-          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-lg transition duration-200 disabled:opacity-50"
+          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold rounded-lg transition duration-200 disabled:opacity-50"
         >
           {isLoading ? 'Creating Account...' : 'Sign Up'}
         </button>
@@ -210,7 +210,7 @@ export default function SignUpPage() {
 
       <p className="text-xs text-center text-slate-400 mt-6">
         Already have an account?{' '}
-        <Link to="/login" className="text-amber-500 font-semibold hover:underline">
+        <Link to="/login" className="text-brand-500 font-semibold hover:underline">
           Log in
         </Link>
       </p>

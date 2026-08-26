@@ -1,12 +1,21 @@
 import { useState } from "react";
-import { CornerDownRight } from "lucide-react";
+import { useSelector } from "react-redux";
+import { CornerDownRight, Pencil, Trash2 } from "lucide-react";
+import { selectCurrentUser } from "../../features/auth/authSlice";
 import { timeAgo } from "../../utils/format";
 import Avatar from "../ui/Avatar";
 import RoleBadge from "../ui/RoleBadge";
 
-export default function CommentThread({ comment, onReply, depth = 0 }) {
+export default function CommentThread({ comment, onReply, onEdit, onDelete, depth = 0 }) {
+  const currentUser = useSelector(selectCurrentUser);
   const [replying, setReplying] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.body);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const isOwnComment = currentUser?.id === comment.author?.id;
+  const canDelete = isOwnComment || currentUser?.role === "admin";
 
   async function submitReply(e) {
     e.preventDefault();
@@ -16,23 +25,103 @@ export default function CommentThread({ comment, onReply, depth = 0 }) {
     setReplying(false);
   }
 
+  async function submitEdit(e) {
+    e.preventDefault();
+    if (!editText.trim() || editText === comment.body) {
+      setEditing(false);
+      return;
+    }
+    await onEdit(comment.id, editText.trim());
+    setEditing(false);
+  }
+
+  async function confirmDelete() {
+    await onDelete(comment.id);
+    setConfirmingDelete(false);
+  }
+
   return (
-    <div className={depth > 0 ? "ml-6 pl-4 border-l border-slate-800" : ""}>
+    <div className={depth > 0 ? "ml-6 pl-4 border-l border-navy-border" : ""}>
       <div className="flex gap-3">
         <Avatar username={comment.author?.username} role={comment.author?.role} size="sm" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-200">{comment.author?.username}</span>
+            <span className="text-sm font-medium text-cream">{comment.author?.username}</span>
             <RoleBadge role={comment.author?.role} />
-            <span className="text-[11px] text-slate-500 font-mono">{timeAgo(comment.createdAt)}</span>
+            <span className="text-[11px] text-slate-400 font-mono">{timeAgo(comment.createdAt)}</span>
+            {comment.updatedAt && !comment.deleted && (
+              <span className="text-[11px] text-slate-400 italic">(edited)</span>
+            )}
           </div>
-          <p className="text-sm text-slate-300 mt-0.5">{comment.body}</p>
-          <button
-            onClick={() => setReplying((v) => !v)}
-            className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-amber-400 mt-1.5"
-          >
-            <CornerDownRight className="w-3 h-3" /> Reply
-          </button>
+
+          {editing ? (
+            <form onSubmit={submitEdit} className="mt-1.5 flex gap-2">
+              <input
+                autoFocus
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="flex-1 px-3 py-1.5 rounded-lg bg-navy border border-navy-border text-xs text-cream focus:outline-none focus:border-brand-500"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-slate-950 text-xs font-semibold rounded-lg"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setEditText(comment.body);
+                }}
+                className="px-3 py-1.5 bg-navy-raised hover:bg-navy-borderLight text-slate-300 text-xs rounded-lg"
+              >
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <p className={`text-sm mt-0.5 ${comment.deleted ? "text-slate-400 italic" : "text-slate-300"}`}>
+              {comment.body}
+            </p>
+          )}
+
+          {!comment.deleted && !editing && (
+            <div className="flex items-center gap-3 mt-1.5">
+              <button
+                onClick={() => setReplying((v) => !v)}
+                className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-brand-600"
+              >
+                <CornerDownRight className="w-3 h-3" /> Reply
+              </button>
+              {isOwnComment && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-brand-600"
+                >
+                  <Pencil className="w-3 h-3" /> Edit
+                </button>
+              )}
+              {canDelete && !confirmingDelete && (
+                <button
+                  onClick={() => setConfirmingDelete(true)}
+                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-red-400"
+                >
+                  <Trash2 className="w-3 h-3" /> Delete
+                </button>
+              )}
+              {confirmingDelete && (
+                <span className="flex items-center gap-2 text-[11px]">
+                  <span className="text-slate-400">Delete this comment?</span>
+                  <button onClick={confirmDelete} className="text-red-400 font-medium hover:underline">
+                    Yes
+                  </button>
+                  <button onClick={() => setConfirmingDelete(false)} className="text-slate-400 hover:underline">
+                    Cancel
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
 
           {replying && (
             <form onSubmit={submitReply} className="mt-2 flex gap-2">
@@ -41,11 +130,11 @@ export default function CommentThread({ comment, onReply, depth = 0 }) {
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder={`Reply to ${comment.author?.username}…`}
-                className="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-500"
+                className="flex-1 px-3 py-1.5 rounded-lg bg-navy border border-navy-border text-xs text-cream focus:outline-none focus:border-brand-500"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold rounded-lg"
+                className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-slate-950 text-xs font-semibold rounded-lg"
               >
                 Reply
               </button>
@@ -55,7 +144,14 @@ export default function CommentThread({ comment, onReply, depth = 0 }) {
           {comment.replies?.length > 0 && (
             <div className="mt-3 space-y-3">
               {comment.replies.map((reply) => (
-                <CommentThread key={reply.id} comment={reply} onReply={onReply} depth={depth + 1} />
+                <CommentThread
+                  key={reply.id}
+                  comment={reply}
+                  onReply={onReply}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  depth={depth + 1}
+                />
               ))}
             </div>
           )}

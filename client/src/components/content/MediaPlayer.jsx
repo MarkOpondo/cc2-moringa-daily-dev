@@ -8,13 +8,13 @@ export default function MediaPlayer({ type, url }) {
 
   if (!embed || failed) {
     return (
-      <div className="aspect-video bg-slate-900 border border-slate-800 rounded-xl flex flex-col items-center justify-center gap-2 text-center px-6">
+      <div className="aspect-video bg-navy-raised border border-navy-border rounded-xl flex flex-col items-center justify-center gap-2 text-center px-6">
         {type === "audio" ? (
-          <Headphones className="w-8 h-8 text-slate-700" />
+          <Headphones className="w-8 h-8 text-slate-300" />
         ) : (
-          <Video className="w-8 h-8 text-slate-700" />
+          <Video className="w-8 h-8 text-slate-300" />
         )}
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-400">
           {embed ? "Couldn't load this media." : "No valid media link was provided."}
         </p>
         {url && (
@@ -22,7 +22,7 @@ export default function MediaPlayer({ type, url }) {
             href={url}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 text-xs text-amber-400 hover:underline"
+            className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
           >
             Open original link <ExternalLink className="w-3 h-3" />
           </a>
@@ -33,7 +33,7 @@ export default function MediaPlayer({ type, url }) {
 
   if (embed.provider === "youtube" || embed.provider === "vimeo") {
     return (
-      <div className="aspect-video rounded-xl overflow-hidden border border-slate-800 bg-black">
+      <div className="aspect-video rounded-xl overflow-hidden border border-navy-border bg-black">
         <iframe
           src={embed.embedUrl}
           title="Embedded media player"
@@ -48,7 +48,7 @@ export default function MediaPlayer({ type, url }) {
 
   if (type === "audio") {
     return (
-      <div className="p-6 bg-slate-900 border border-slate-800 rounded-xl">
+      <div className="p-6 bg-navy-raised border border-navy-border rounded-xl">
         <audio controls className="w-full" onError={() => setFailed(true)}>
           <source src={embed.embedUrl} />
         </audio>
@@ -59,7 +59,7 @@ export default function MediaPlayer({ type, url }) {
   return (
     <video
       controls
-      className="w-full rounded-xl border border-slate-800 bg-black aspect-video"
+      className="w-full rounded-xl border border-navy-border bg-black aspect-video"
       onError={() => setFailed(true)}
     >
       <source src={embed.embedUrl} />

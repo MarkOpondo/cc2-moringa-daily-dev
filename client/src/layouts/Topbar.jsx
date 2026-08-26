@@ -1,89 +1,78 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { Search, LogOut, User as UserIcon, FlaskConical } from "lucide-react";
-import { selectCurrentUser, selectIsPreview, setPreviewRole, logout } from "../../features/auth/authSlice";
-import { roleLabel } from "../../utils/format";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { Menu, Search, Plus, Bell, Rss } from "lucide-react";
+import { selectCurrentUser } from "../../features/auth/authSlice";
+import { selectUnreadCount } from "../../features/notifications/notificationsSlice";
 import Avatar from "../ui/Avatar";
+import NavDrawer from "./NavDrawer";
 
 export default function Topbar({ search, onSearchChange }) {
   const user = useSelector(selectCurrentUser);
-  const isPreview = useSelector(selectIsPreview);
-  const dispatch = useDispatch();
+  const unread = useSelector(selectUnreadCount);
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  function handleLogout() {
-    dispatch(logout());
-    navigate("/login");
-  }
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-4 px-6 py-4 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
-      <div className="relative flex-1 max-w-md">
-        <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-          placeholder="Search articles, videos, audio…"
-          className="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
-        />
-      </div>
-
-      {/* Dev-only: lets anyone browsing this repo preview role-gated UI
-          before real backend auth exists. Never rendered in production
-          builds (import.meta.env.DEV is false there). */}
-      {isPreview && (
-        <label className="hidden lg:flex items-center gap-2 text-[11px] text-slate-500 border border-dashed border-slate-700 rounded-lg px-2.5 py-1.5">
-          <FlaskConical className="w-3.5 h-3.5 text-amber-500" />
-          Preview as
-          <select
-            value={user?.role}
-            onChange={(e) => dispatch(setPreviewRole(e.target.value))}
-            className="bg-transparent text-slate-300 font-mono text-[11px] focus:outline-none"
+    <>
+      <header className="sticky top-0 z-20 bg-navy border-b border-navy-border">
+        <div className="flex items-center gap-4 px-4 sm:px-6 py-3">
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="text-slate-400 hover:text-cream shrink-0"
+            aria-label="Open menu"
           >
-            <option value="admin">Admin</option>
-            <option value="tech_writer">Tech Writer</option>
-            <option value="user">User</option>
-          </select>
-        </label>
-      )}
+            <Menu className="w-6 h-6" strokeWidth={1.75} />
+          </button>
 
-      <div className="relative">
-        <button
-          onClick={() => setMenuOpen((v) => !v)}
-          className="flex items-center gap-2"
-          aria-label="Account menu"
-        >
-          <Avatar username={user?.username} role={user?.role} />
-        </button>
-
-        {menuOpen && (
-          <div
-            className="absolute right-0 mt-2 w-52 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-1.5 text-sm"
-            onMouseLeave={() => setMenuOpen(false)}
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 shrink-0"
           >
-            <div className="px-3.5 py-2 border-b border-slate-800">
-              <p className="text-slate-200 font-medium">{user?.username}</p>
-              <p className="text-[11px] text-slate-500">{roleLabel(user?.role)}</p>
-            </div>
-            <Link
-              to="/profile"
-              onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2 px-3.5 py-2 text-slate-300 hover:bg-slate-800"
-            >
-              <UserIcon className="w-3.5 h-3.5" /> Profile
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3.5 py-2 text-red-400 hover:bg-slate-800 text-left"
-            >
-              <LogOut className="w-3.5 h-3.5" /> Log out
-            </button>
+            <span className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+              <Rss className="w-4 h-4 text-slate-950" strokeWidth={2.25} />
+            </span>
+            <span className="font-display italic font-bold text-lg text-cream hidden sm:inline">
+              MoringaHub
+            </span>
+          </button>
+
+          <div className="relative flex-1 max-w-xl">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              placeholder="Search articles, videos, topics…"
+              className="w-full pl-10 pr-4 py-2.5 rounded-full bg-navy-raised border border-navy-border text-sm text-cream placeholder:text-slate-400 focus:outline-none focus:border-brand-500"
+            />
           </div>
-        )}
-      </div>
-    </header>
+
+          <button
+            onClick={() => navigate("/create")}
+            className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-500 hover:bg-brand-600 text-slate-950 text-sm font-semibold transition shrink-0"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2.5} /> Write
+          </button>
+
+          <button
+            onClick={() => navigate("/notifications")}
+            className="relative text-slate-400 hover:text-cream shrink-0"
+            aria-label="Notifications"
+          >
+            <Bell className="w-5 h-5" strokeWidth={1.75} />
+            {unread > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand-500 ring-2 ring-navy" />
+            )}
+          </button>
+
+          <button onClick={() => navigate("/profile")} className="shrink-0">
+            <Avatar username={user?.username} role={user?.role} />
+          </button>
+        </div>
+      </header>
+
+      <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+    </>
   );
 }
