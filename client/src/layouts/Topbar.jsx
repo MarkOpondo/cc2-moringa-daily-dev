@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Menu, Search, Plus, Bell, Rss } from "lucide-react";
-import { selectCurrentUser } from "../../features/auth/authSlice";
-import { selectUnreadCount } from "../../features/notifications/notificationsSlice";
-import Avatar from "../ui/Avatar";
+import { selectCurrentUser } from "../features/auth/authSlice";
+import { selectUnreadCount } from "../features/notifications/notificationsSlice";
+import Avatar from "../components/ui/Avatar";
 import NavDrawer from "./NavDrawer";
 
 export default function Topbar({ search, onSearchChange }) {

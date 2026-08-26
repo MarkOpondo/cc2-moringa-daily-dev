@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { X, Home, LayoutGrid, Bookmark, Bell, PlusCircle, ShieldCheck, User, LogOut, FlaskConical, Rss } from "lucide-react";
-import { selectCurrentUser, selectIsPreview, setPreviewRole, logout } from "../../features/auth/authSlice";
+import { selectCurrentUser, selectIsPreview, setPreviewRole, logout } from "../features/auth/authSlice";
 
 const NAV_ITEMS = [
   { to: "/", label: "Feed", icon: Home, end: true },
