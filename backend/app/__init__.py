@@ -3,9 +3,9 @@ from flask import Flask, jsonify
 from app.extensions import db, migrate,jwt,bcrypt,cors,ma
 
 
-from config import Config
+from config import DevelopmentConfig
 
-def create_app(config_class=Config):
+def create_app(config_class=DevelopmentConfig):
     app=Flask(__name__)
 
     # load configuration
