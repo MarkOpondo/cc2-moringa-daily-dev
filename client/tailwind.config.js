@@ -7,8 +7,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Display: headings, hero text — technical, geometric, a little sharp.
-        display: ["'Space Grotesk'", "sans-serif"],
+        // Display: headings, card titles, and the logo wordmark — an
+        // editorial serif, matching the Figma reference's title style.
+        display: ["'Playfair Display'", "serif"],
         // Body: everything readable — paragraphs, labels, buttons.
         sans: ["'Manrope'", "sans-serif"],
         // Mono: stats, timestamps, usernames, code-flavored metadata —
@@ -16,13 +17,33 @@ export default {
         mono: ["'JetBrains Mono'", "monospace"],
       },
       colors: {
-        // Role badge colors — one accent per role, used only for small
-        // badges/avatBadges, never as a background, so they read as
-        // labels rather than competing with the amber brand accent.
+        // Moringa's actual brand colors, sampled directly from
+        // moringaschool.com — not invented values.
+        navy: {
+          DEFAULT: "#101f3c",  // page background
+          raised: "#1a2f52",   // card/surface background
+          border: "#2c4570",   // default borders
+          borderLight: "#3d5a8a", // hover/emphasis borders
+        },
+        cream: "#fdf6f0", // primary text on the dark navy background
+        brand: {
+          400: "#fd8a3d", // lighter orange — soft accents, badges
+          500: "#fb6f0f", // primary brand orange
+          600: "#e35d00", // darker orange — hover/pressed states, text-on-white
+        },
+        // Real site's hero gradient stops (white → peach → warm orange) —
+        // used on the login screen's branded panel only.
+        hero: {
+          from: "#fffaf7",
+          via: "#fedecf",
+          to: "#fdba9c",
+        },
+        // Role badge colors — kept independent of the brand accent so
+        // they still read as distinct labels, not competing with orange.
         role: {
-          admin: "#38bdf8",   // sky-400
-          writer: "#a78bfa",  // violet-400
-          user: "#94a3b8",    // slate-400
+          admin: "#38bdf8",
+          writer: "#a78bfa",
+          user: "#94a3b8",
         },
       },
     },

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { fetchProfile, updateProfile } from '../services/profileApi';
 
 export default function ProfilePage() {
-  // hold user profile info in state
   const [profile, setProfile] = useState({
     username: '',
     email: '',
@@ -12,13 +11,11 @@ export default function ProfilePage() {
     github_url: '',
     interests: '',
   });
-  
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
   const navigate = useNavigate();
 
-  // grab user profile data when page loads
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -41,7 +38,6 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
-  // save updated profile info to backend
   const handleSave = async (e) => {
     e.preventDefault();
     setStatusMsg({ type: '', text: '' });
@@ -59,7 +55,6 @@ export default function ProfilePage() {
     }
   };
 
-  // clear token and send user back to login
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -74,12 +69,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6 w-full">
-      <div className="max-w-3xl mx-auto">
-        
-        {/* page header */}
+    <div className="w-full">
+      <div className="max-w-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-amber-500">Developer Profile</h1>
+          <h1 className="text-2xl font-bold text-brand-500">Developer Profile</h1>
           <button
             onClick={handleLogout}
             className="px-3.5 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition"
@@ -88,7 +81,6 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* error or success alert banner */}
         {statusMsg.text && (
           <div
             className={`mb-4 p-3 rounded-lg text-xs text-center border ${
@@ -101,19 +93,17 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* main profile card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+        <div className="bg-navy-raised border border-navy-border rounded-xl p-6 space-y-4">
           <div>
             <label className="block text-xs text-slate-400">Username</label>
-            <p className="text-base font-semibold text-slate-200">{profile.username}</p>
+            <p className="text-base font-semibold text-cream">{profile.username}</p>
           </div>
 
           <div>
             <label className="block text-xs text-slate-400">Email</label>
-            <p className="text-base font-semibold text-slate-200">{profile.email}</p>
+            <p className="text-base font-semibold text-cream">{profile.email}</p>
           </div>
 
-          {/* toggle between view mode and edit form */}
           {isEditing ? (
             <form onSubmit={handleSave} className="space-y-4 pt-2">
               <div>
@@ -121,7 +111,7 @@ export default function ProfilePage() {
                 <textarea
                   value={profile.bio}
                   onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                  className="w-full px-3 py-2 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
                   rows="3"
                 />
               </div>
@@ -132,8 +122,7 @@ export default function ProfilePage() {
                   type="text"
                   value={profile.skills}
                   onChange={(e) => setProfile({ ...profile, skills: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
-                  placeholder="e.g. React, Node, Python"
+                  className="w-full px-3 py-2 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
                 />
               </div>
 
@@ -143,8 +132,7 @@ export default function ProfilePage() {
                   type="url"
                   value={profile.github_url}
                   onChange={(e) => setProfile({ ...profile, github_url: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
-                  placeholder="https://github.com/username"
+                  className="w-full px-3 py-2 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
                 />
               </div>
 
@@ -155,9 +143,9 @@ export default function ProfilePage() {
                   value={profile.interests}
                   onChange={(e) => setProfile({ ...profile, interests: e.target.value })}
                   placeholder="Comma-separated, e.g. DevOps, Frontend, Career"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                  className="w-full px-3 py-2 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="text-[11px] text-slate-400 mt-1">
                   Used to personalize your recommended feed and subscription suggestions.
                 </p>
               </div>
@@ -165,21 +153,21 @@ export default function ProfilePage() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs rounded-lg transition"
+                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold text-xs rounded-lg transition"
                 >
                   Save Changes
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition"
+                  className="px-4 py-2 bg-navy-raised hover:bg-navy-borderLight text-slate-300 text-xs rounded-lg transition"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="space-y-4 pt-2 border-t border-slate-800">
+            <div className="space-y-4 pt-2 border-t border-navy-border">
               <div>
                 <label className="block text-xs text-slate-400">Bio</label>
                 <p className="text-sm text-slate-300">{profile.bio || 'No bio added yet.'}</p>
@@ -197,7 +185,7 @@ export default function ProfilePage() {
                     href={profile.github_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-sm text-amber-500 hover:underline"
+                    className="text-sm text-brand-500 hover:underline"
                   >
                     {profile.github_url}
                   </a>
@@ -213,7 +201,7 @@ export default function ProfilePage() {
                     {profile.interests.split(',').map((tag) => tag.trim()).filter(Boolean).map((tag) => (
                       <span
                         key={tag}
-                        className="text-[11px] font-mono px-2 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700"
+                        className="text-[11px] font-mono px-2 py-1 rounded-full bg-navy-raised text-slate-300 border border-navy-border"
                       >
                         {tag}
                       </span>
@@ -226,7 +214,7 @@ export default function ProfilePage() {
 
               <button
                 onClick={() => setIsEditing(true)}
-                className="mt-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs rounded-lg transition"
+                className="mt-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold text-xs rounded-lg transition"
               >
                 Edit Profile
               </button>

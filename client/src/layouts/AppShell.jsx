@@ -1,9 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import Sidebar from "./SideBar";
 import Topbar from "./Topbar";
-import MobileNav from "./MobileNav";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { fetchCategories, fetchSubscriptions } from "../../features/categories/categoriesSlice";
 import { fetchNotifications } from "../../features/notifications/notificationsSlice";
@@ -31,15 +29,11 @@ export default function AppShell() {
   }
 
   return (
-    <div className="flex bg-slate-950 min-h-screen">
-      <Sidebar />
-      <div className="flex-1 min-w-0">
-        <Topbar search={searchParams.get("q") || ""} onSearchChange={handleSearchChange} />
-        <main className="p-6 pb-24 md:pb-6 max-w-4xl mx-auto">
-          <Outlet />
-        </main>
-      </div>
-      <MobileNav />
+    <div className="bg-navy min-h-screen">
+      <Topbar search={searchParams.get("q") || ""} onSearchChange={handleSearchChange} />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <Outlet />
+      </main>
     </div>
   );
 }

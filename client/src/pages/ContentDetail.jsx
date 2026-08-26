@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { ThumbsUp, ThumbsDown, Bookmark, Share2, Flag, Video, Headphones, FileText, Check } from "lucide-react";
 import { getContent, react, reactionSummary, toggleWishlist, isWishlisted } from "../services/contentApi";
-import { listComments, addComment } from "../services/commentsApi";
+import { listComments, addComment, updateComment, deleteComment } from "../services/commentsApi";
 import { reportContent } from "../services/adminApi";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { categoryColor } from "../utils/categoryColors";
@@ -88,6 +88,18 @@ export default function ContentDetail() {
     setComments(tree);
   }
 
+  async function handleEditComment(commentId, newBody) {
+    await updateComment(commentId, newBody);
+    const tree = await listComments(id);
+    setComments(tree);
+  }
+
+  async function handleDeleteComment(commentId) {
+    await deleteComment(commentId);
+    const tree = await listComments(id);
+    setComments(tree);
+  }
+
   if (loading) return <ContentCardSkeleton />;
   if (!item) return <p className="text-slate-400">This post couldn't be found.</p>;
 
@@ -97,25 +109,25 @@ export default function ContentDetail() {
   return (
     <article className="space-y-8">
       <div>
-        <Link to="/" className="text-xs text-slate-500 hover:text-slate-300">← Back to feed</Link>
+        <Link to="/" className="text-xs text-slate-400 hover:text-slate-300">← Back to feed</Link>
 
         <div className="flex items-center gap-2 mt-4 mb-2">
           <span className={`text-[11px] font-mono uppercase tracking-wide ${colors.text}`}>{item.category?.name}</span>
-          <span className="text-slate-700">·</span>
-          <TypeIcon className="w-3.5 h-3.5 text-slate-500" />
-          <span className="text-[11px] text-slate-500 capitalize">{item.type}</span>
+          <span className="text-slate-300">·</span>
+          <TypeIcon className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] text-slate-400 capitalize">{item.type}</span>
         </div>
 
-        <h1 className="text-3xl font-display font-bold text-white leading-tight">{item.title}</h1>
+        <h1 className="text-3xl font-display font-bold text-cream leading-tight">{item.title}</h1>
 
         <div className="flex items-center gap-2 mt-4">
           <Avatar username={item.author?.username} role={item.author?.role} />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-200">{item.author?.username}</span>
+              <span className="text-sm font-medium text-cream">{item.author?.username}</span>
               <RoleBadge role={item.author?.role} />
             </div>
-            <span className="text-[11px] text-slate-500 font-mono">{timeAgo(item.createdAt)}</span>
+            <span className="text-[11px] text-slate-400 font-mono">{timeAgo(item.createdAt)}</span>
           </div>
         </div>
       </div>
@@ -128,13 +140,13 @@ export default function ContentDetail() {
         {item.body}
       </div>
 
-      <div className="flex items-center gap-2 py-4 border-y border-slate-800">
+      <div className="flex items-center gap-2 py-4 border-y border-navy-border">
         <button
           onClick={() => handleReact("like")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
             reactionState.userReaction === "like"
-              ? "bg-amber-500/10 border-amber-500/40 text-amber-400"
-              : "border-slate-800 text-slate-400 hover:border-slate-700"
+              ? "bg-brand-500/10 border-brand-500/40 text-brand-600"
+              : "border-navy-border text-slate-400 hover:border-navy-border"
           }`}
         >
           <ThumbsUp className="w-3.5 h-3.5" /> {reactionState.likes}
@@ -144,7 +156,7 @@ export default function ContentDetail() {
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
             reactionState.userReaction === "dislike"
               ? "bg-red-500/10 border-red-500/40 text-red-400"
-              : "border-slate-800 text-slate-400 hover:border-slate-700"
+              : "border-navy-border text-slate-400 hover:border-navy-border"
           }`}
         >
           <ThumbsDown className="w-3.5 h-3.5" /> {reactionState.dislikes}
@@ -152,21 +164,21 @@ export default function ContentDetail() {
         <button
           onClick={handleWishlist}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
-            saved ? "bg-amber-500/10 border-amber-500/40 text-amber-400" : "border-slate-800 text-slate-400 hover:border-slate-700"
+            saved ? "bg-brand-500/10 border-brand-500/40 text-brand-600" : "border-navy-border text-slate-400 hover:border-navy-border"
           }`}
         >
           <Bookmark className="w-3.5 h-3.5" /> {saved ? "Saved" : "Save"}
         </button>
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-800 text-slate-400 hover:border-slate-700 transition"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-navy-border text-slate-400 hover:border-navy-border transition"
         >
           {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
           {copied ? "Link copied" : "Share"}
         </button>
         <button
           onClick={handleReport}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-red-400 ml-auto"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-red-400 ml-auto"
         >
           <Flag className="w-3.5 h-3.5" /> Report
         </button>
@@ -174,7 +186,7 @@ export default function ContentDetail() {
 
       <section className="space-y-5">
         <h2 className="text-sm font-semibold text-slate-300">
-          Discussion <span className="text-slate-600 font-mono">({comments.length})</span>
+          Discussion <span className="text-slate-400 font-mono">({comments.length})</span>
         </h2>
 
         <form onSubmit={handleTopLevelComment} className="flex gap-2">
@@ -183,18 +195,26 @@ export default function ContentDetail() {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Add to the discussion…"
-            className="flex-1 px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+            className="flex-1 px-3.5 py-2 rounded-lg bg-navy-raised border border-navy-border text-sm text-cream placeholder:text-slate-400 focus:outline-none focus:border-brand-500"
           />
-          <button type="submit" className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold rounded-lg">
+          <button type="submit" className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-slate-950 text-xs font-semibold rounded-lg">
             Post
           </button>
         </form>
 
         <div className="space-y-5">
           {comments.length === 0 ? (
-            <p className="text-sm text-slate-500">No comments yet — start the discussion.</p>
+            <p className="text-sm text-slate-400">No comments yet — start the discussion.</p>
           ) : (
-            comments.map((comment) => <CommentThread key={comment.id} comment={comment} onReply={handleReply} />)
+            comments.map((comment) => (
+              <CommentThread
+                key={comment.id}
+                comment={comment}
+                onReply={handleReply}
+                onEdit={handleEditComment}
+                onDelete={handleDeleteComment}
+              />
+            ))
           )}
         </div>
       </section>
