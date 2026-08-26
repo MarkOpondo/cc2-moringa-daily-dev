@@ -17,10 +17,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     debug=True
-     SQLALCHEMY_DATABASE_URI=os.environ.get(
-        'DATABASE_URL',
-        "postgresql://postgres:postgres@localhost:5432/tech-space"
-    )
+    SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL',"postgresql://postgres:postgres@localhost:5432/Moringa_daily_dev")
 
 config_by_name = {
     'development' : DevelopmentConfig
