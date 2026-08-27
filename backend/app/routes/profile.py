@@ -5,9 +5,10 @@ from app.models import Profile
 
 profiles_bp=Blueprint("profiles", __name__)
 
-@profiles_bp.get("/<int:user_id>")
+@profiles_bp.get("/me")
 @jwt_required()
 def get_profile(user_id):
+
     profile = Profile.query.filter_by(UserID=user_id).first()
 
     if not profile:
@@ -21,10 +22,10 @@ def get_profile(user_id):
         "profile_image": profile.ProfileImage
     }),200
 
-@profiles_bp.put("/<int:user_id>")
+@profiles_bp.put("/me")
 @jwt_required()
 def update_profile(user_id):
-    # Users can edit their own profile\
+    # Users can edit their own profile
     current_user_id=int(get_jwt_identity())
     if current_user_id != user_id:
         return jsonify({"Error": "You can only edit your own profile."}),403
