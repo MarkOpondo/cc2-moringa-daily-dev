@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required,get_jwt_identity
 from app.extensions import db
 from app.models import Category
 from app.utils import role_required
@@ -69,7 +69,7 @@ def update_category(category_id):
             Category.CategoryID != category.CategoryID
         ).first()
 
-    IF existing_category:
+    if existing_category:
     return jsonify({
         "error": "Category already exists"
     }) ,409       
