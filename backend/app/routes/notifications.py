@@ -26,6 +26,7 @@ def get_notifications():
 @notifications_bp.patch("/<int:notification_id>/read")
 @jwt_required()
 def mark_as_read(notification_id):
+
     notif = Notification.query.get_or_404(notification_id)
 
     if notif.UserID != int(get_jwt_identity()):
@@ -34,3 +35,20 @@ def mark_as_read(notification_id):
     db.session.commit()
     return jsonify({
         "message": "Notification marked as read. "}), 200    
+
+#------------------------------ MARK ALL AS READ-------------------
+@notifications_bp.patch("/read-all")
+@jwt_required()
+def mark_as_read():
+    user_id = int(get_jwt_identity())
+
+    notifications = Notification.query.filter_by(
+        UserID=user_id,
+        IsRead=False
+    ).all()
+    for notification in notifications:
+        notification.IsRead =True
+    db.session.commit()
+    return jsonify({
+        "message": "All notifications marked as read"
+    }),200   
