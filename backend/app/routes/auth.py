@@ -1,6 +1,6 @@
 from flask import Blueprint, request,jsonify
 from flask_jwt_extended import create_access_token
-from app.extensions import db
+from app.extensions import db, bcrypt
 from app.models import User, Profile
 
 auth_bp=Blueprint("auth", __name__)
@@ -19,31 +19,28 @@ def register():
 
     if not all([username,email,password]):
         return jsonify({"error": "username, email, password are required"}),400
-    existing= User.query.filter(
-        (User.Username == username) |
-         (User.Email == email)
-    ).first()
+        existing= User.query.filter(
+            (User.Username == username) | (User.Email == email)
+        ).first()
 
     if existing:
         return jsonify({"error": "Username or email already exists."}), 400
 
+    password_Hash= bcrypt.generate_password_hash(password).decode("utf-8")
     new_user = User(
         Username = username,
         Email= email,
+        _password_Hash= password_Hash,
         Role = "user",
         IsActive=True
-    )
-
-    new_user.password_hash= password
-
+    )        
+    new_user.set_password(password)
     db.session.add(new_user)
     db.session.flush()
 
-    new_profile=Profile(UserID= new_user.UserID)
+    new_profile=Profile(userID= new_user.UserID)
     db.session.add(new_profile)
-
     db.session.commit()
-
     return jsonify({
         "message": "User created successfully.",
         "user_id": new_user.UserID
@@ -52,7 +49,7 @@ def register():
 #------------------------------ login -----------------
 @auth_bp.post("/login")
 def login():
-    data = request.get_json()
+    data = reqquest.get_json()
 
     if not data:
         return jsonify({"error": "No input data provided."}), 400
@@ -63,26 +60,29 @@ def login():
         return jsonify({"error": "Username and password are required"}), 400
     user =  User.query.filter_by(Username=username).first()
 
-    if not user or user.authenticate(password):
+    if not user or not bcrypt.check_password_hash(user._Password_Hash,password):
         return jsonify({"error": " Invalid Username or password"}), 401
     
     if not user.IsActive:
-        return jsonify({"error": "Account is inactive. Contact the admin"}), 403
-    access_token= create_access_token(
-        identity=str(user.UserID))
+        retrun jsonify({"error": "Account is inacive. Contact the admin"}), 403
+    access_token= create_access_token(identity=str(user.UserID))
 
     return jsonify({
         "token": access_token,
         "user":{
-            "id":user.UserID,
-            "username":user.Username,
-            "email":user.Email,
-            "role":user.Role
+            "id": user. UserID,
+            "username": user.Username,
+            "email": user.Email,
+            "role": user.Role
         },
         "message": "Login successful"
     }), 200
->#--------------------------------logout----------------------
+#--------------------------------logout----------------------
 @auth_bp.post("/logout")
 def logout():
     return jsonify({"message": "Logout successful."}), 200
+
+
+
+
 
