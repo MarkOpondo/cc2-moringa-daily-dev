@@ -1,38 +1,53 @@
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_marshmallow import Marshmallow
-from sqlalchemy import MetaData
-from flask_jwt_extended import JWTManager
-from flask_bcrypt import Bcrypt
 
-from config import config_by_name
+from app.extensions import db, migrate,jwt,bcrypt,cors,ma
 
-metadata = MetaData(naming_convention={
-    "fk" : "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-})
 
-db = SQLAlchemy(metadata=metadata)
-migrate = Migrate()
-ma = Marshmallow()
-jwt = JWTManager()
-bcrypt = Bcrypt()
+from config import DevelopmentConfig
 
-def create_app(config_name='development'):
-    app = Flask(__name__)
-    app.config.from_object(config_by_name[config_name])
+def create_app(config_class=DevelopmentConfig):
+    app=Flask(__name__)
 
+    # load configuration
+    app.config.from_object(config_class)
+
+    # Initialize extensions
     db.init_app(app)
-    migrate.init_app(app, db)
-    ma.init_app(app)
+    migrate.init_app(app,db)
     jwt.init_app(app)
     bcrypt.init_app(app)
+    cors.init_app(app, resources={r"/api/*":{"origins":"*"}})
+    ma.init_app(app)
 
-    from .Routes.routes import bp
-    app.register_blueprint(bp, url_prefix='/api')
-
+    # Import models
     with app.app_context():
         from app import models
+
+    # Import route Blueprints
+    #-------------------Blueprints----------------#
+    from app.routes.auth import auth_bp
+    from app.routes.users import users_bp
+    from app.routes.profiles import  profiles_bp
+    from app.routes.categories import categories_bp
+    from app.routes.content import content_bp
+    from app.routes.comments import comments_bp
+    from app.routes.interactions import interactions_bp
+    from app.routes.notifications import notifications_bp
+    from app.routes.reports import reports_bp
+    from app.routes.subscriptions import subscriptions_bp
+    from app.routes.comments_reactions import comments_reactions_bp
+
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(users_bp, url_prefix="/api/users")
+    app.register_blueprint(profiles_bp, url_prefix="/api/profiles")
+    app.register_blueprint(categories_bp, url_prefix="/api/categories")
+    app.register_blueprint(content_bp, url_prefix="/api/content")
+    app.register_blueprint(comments_bp, url_prefix="/api")
+    app.register_blueprint(interactions_bp, url_prefix="/api")
+    app.register_blueprint(notifications_bp, url_prefix="/api/users/me/notifications")
+    app.register_blueprint(subscriptions_bp,url_prefix="/api")
+    app.register_blueprint(comments_reactions_bp,url_prefix="/api")
+    app.register_blueprint(reports_bp, url_prefix="/api")
 
     @app.get('/')
     def index():
