@@ -60,7 +60,7 @@ def login():
         return jsonify({"error": "Username and password are required"}), 400
     user =  User.query.filter_by(Username=username).first()
 
-    if not user or not bcrypt.check_password_hash(user._Password_Hash,password):
+    if not user or not user.authenticate(password):
         return jsonify({"error": " Invalid Username or password"}), 401
     
     if not user.IsActive:
@@ -94,7 +94,7 @@ def forgot_password():
     if not user:
         return jsonify({"error": "No account found with that email"}), 404
     return jsonify({"message": "Password reset request received"}),200
-            
+
 #--------------------------------logout----------------------
 @auth_bp.post("/logout")
 def logout():
