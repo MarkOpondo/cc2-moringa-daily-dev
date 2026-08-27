@@ -23,7 +23,7 @@ def react_to_content(content_id):
     user_id =int(get_jwt_identity())
 
     existing = ContentReaction.query.filter_by(
-        userID=user_id,
+        UserID=user_id,
         ContentID= content_id
         ).first()
 
@@ -113,12 +113,12 @@ def add_to_wishlist():
     db.session.commit()
     return jsonify({"message": "Added to wishlist."}),201
 
-@interactions_bp.delete("/wishlist/<int:wishlist_id>")
+@interactions_bp.delete("/wishlist/<int:content_id>")
 @jwt_required()
 def remove_from_wishlist(wishlist_id):
     wishlist= Wishlist.query.get_or_404(wishlist_id)
 
-    if wishlist.userID != int(get_jwt_identity()):
+    if wishlist.UserID != int(get_jwt_identity()):
         return jsonify({"error": "Forbidden"}),403
 
     db.session.delete(wishlist)
