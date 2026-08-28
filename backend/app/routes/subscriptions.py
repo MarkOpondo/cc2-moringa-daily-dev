@@ -6,10 +6,18 @@ from app.models import Subscription, Category
 subscriptions_bp = Blueprint("subscriptions", __name__)
 
 #------------------ SUBSCRIBE TO CATEGORY ------------------
-@subscriptions_bp.post("/<int: category_id>")
+@subscriptions_bp.post("")
 @jwt_required()
 def subscribe_to_category(category_id):
     user_id = int(get_jwt_identity())
+
+    data=request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}),400
+    
+    category_id= data.get("category_id")
+    if not category_id:
+        return jsonify({"error": "category_id is required"}),400   
 
     # checking that the category exists
     category=Category.query.get_or_404(category_id)
@@ -38,9 +46,10 @@ def subscribe_to_category(category_id):
 
 #--------------------------------GET MY SUBSCRIPTIONS-------------
 @subscriptions_bp.get("")
- @jwt_required()
- def get_my_subscriptions():
+@jwt_required()
+def get_my_subscriptions():
     user_id= int(get_jwt_identity())
+
     subscriptions= Subscription.query.filter_by(
         UserID=user_id
     ).all()
@@ -58,10 +67,11 @@ def subscribe_to_category(category_id):
     ]),200   
 
 #------------------------------ UNSUBSCRIBE -----------------------------
-@subscriptions_bp.delete("/int:category_id")
+@subscriptions_bp.delete("/<int:category_id>")
 @jwt_required()
 def unsubscribe_from_category(category_id):
     user_id = int(get_jwt_identity())
+
     subscription = Subscription.query.filter_by(
         UserID= user_id,
         CategoryID=category_id,
@@ -70,8 +80,6 @@ def unsubscribe_from_category(category_id):
         return jsonify({
             "error": "You are not a subscriber to this cateory."
         }),404
-        db.session.delete(subscription)
-        db.session.commit()
-        return jsonify({
-            "message": "Unsubscribed successfully"
-        }),200
+    db.session.delete(subscription)
+    db.session.commit()
+    return jsonify({"message": "Unsubscribed successfully"}),200

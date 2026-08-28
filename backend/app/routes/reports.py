@@ -11,7 +11,13 @@ reports_bp= Blueprint("reports", __name__)
 def report_content(content_id):
     data = request.get_json()
     if not data:
-        data={}
+        return jsonify({
+            "error": "Request body is required."
+        }),400
+    if not reason:
+        return jsonify({
+            "error": "Reason is required"
+        }),400  
 
     report = ContentReport(
         ReportedBy= int(get_jwt_identity()),
@@ -40,8 +46,8 @@ def list_reports():
     ).all()    
     
     return jsonify([{
-        "id": report.ContentReport.id,
-        "content_id": report.contentID,
+        "id": report.ReportID,
+        "content_id": report.ContentID,
         "user_id": report.ReportedBy,
         "reason": report.Reason,
         "status": report.Status
@@ -54,7 +60,7 @@ def list_reports():
 def resolve_report(report_id):
 
     report = ContentReport.query.get_or_404(report_id)
-    report.Status="resolved"
+    report.Status="Resolved"
     
     db.session.commit()
     return jsonify({"message": "Report resolved."}),200

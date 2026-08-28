@@ -53,7 +53,7 @@ def admin_add_user():
     db.session.add(new_user)
     db.session.flush()
 
-    db.session.add(Profile(UserID=new_user.userID))
+    db.session.add(Profile(UserID=new_user.UserID))
     db.session.commit()
 
     return jsonify({
@@ -66,7 +66,7 @@ def admin_add_user():
 @role_required("admin")
 def deactivate_user(user_id):
     user= User.query.get_or_404(user_id)
-    user.IsActive = False
+    user.IsActive = not user.IsActive
     db.session.commit()
     return jsonify({
         "message": f"User '{user.Username}' has been deactivated."}),200
@@ -110,7 +110,7 @@ def update_current_user():
         ).first()
 
         if existing_username:
-            return jsonify({"error": "Username already taken"})
+            return jsonify({"error": "Username already taken"}),200
         user.Username= data["username"]
 
     if "email" in data:
