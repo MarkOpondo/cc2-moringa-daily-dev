@@ -39,7 +39,7 @@ def mark_as_read(notification_id):
 #------------------------------ MARK ALL AS READ-------------------
 @notifications_bp.patch("/read-all")
 @jwt_required()
-def mark_as_read():
+def mark_all_as_read():
     user_id = int(get_jwt_identity())
 
     notifications = Notification.query.filter_by(
