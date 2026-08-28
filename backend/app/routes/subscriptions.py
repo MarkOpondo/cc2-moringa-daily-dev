@@ -46,8 +46,8 @@ def subscribe_to_category(category_id):
 
 #--------------------------------GET MY SUBSCRIPTIONS-------------
 @subscriptions_bp.get("")
- @jwt_required()
- def get_my_subscriptions():
+@jwt_required()
+def get_my_subscriptions():
     user_id= int(get_jwt_identity())
 
     subscriptions= Subscription.query.filter_by(
@@ -82,6 +82,4 @@ def unsubscribe_from_category(category_id):
         }),404
     db.session.delete(subscription)
     db.session.commit()
-        return jsonify({
-            "message": "Unsubscribed successfully"
-        }),200
+    return jsonify({"message": "Unsubscribed successfully"}),200
