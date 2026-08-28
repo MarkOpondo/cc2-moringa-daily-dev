@@ -58,8 +58,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL",
-        "postgresql://postgres:sam53%21@localhost:5432/Moringa_daily_dev"
+        "DATABASE_URL"
     )
 
 
