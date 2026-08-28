@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
-from app.models import Content, User, Subscription, Notification
+from app.models import Content, User,Category, Subscription, Notification
 from app.utils import role_required
 
 content_bp = Blueprint("content", __name__)
@@ -9,18 +9,18 @@ content_bp = Blueprint("content", __name__)
 #----------------------------- NOTIFY SUBSCRIBERS-----
 def _notify_subscribers(content_item):
     """ Send notifications to users subscribed to this content's category."""
-     notifications=[]
+    notifications=[]
     for category in content_item.categories:
         subscriptions = Subscription.query.filter_by(CategoryID=category.CategoryID).all()
-    for sub in subscriptions:
-        if sub.UserID != content_item.UserID:
-            Notification.append(
-                Notification(
-                    UserID= sub.UserID,
-                    ContentID=content_item.ContentID,
-                    message=f"New content in your feed: '{content_item.Title}'"
+        for sub in subscriptions:
+            if sub.UserID != content_item.UserID:
+                notifications.append(
+                    Notification(
+                        UserID= sub.UserID,
+                        ContentID=content_item.ContentID,
+                        Message=f"New content in your feed: '{content_item.Title}'"
+                    )
                 )
-            )
       
     if notifications:
         db.session.add_all(notifications)
@@ -70,7 +70,7 @@ def list_content():
     }for content in items]), 200
 
 #----------------------------------- GET A SPECIFIC CONTENT--------------
-@content_bp.get("/<int: content_id>")
+@content_bp.get("/<int:content_id>")
 def get_single_content(content_id):
     item = Content.query.get_or_404(content_id)
 
@@ -81,7 +81,7 @@ def get_single_content(content_id):
         "type": item.ContentType,
         "url": item.ContentURL,
         "status": item.Status,
-        "auth_id": item.UserID,
+        "author_id": item.UserID,
         "category_id": [
             {
                 "id": category.CategoryID,
@@ -105,7 +105,7 @@ def create_content():
     if not data:
         return jsonify({
             "error": "No input data provided"
-        })
+        }),400
 
     user_id= int(get_jwt_identity())
 
@@ -119,7 +119,7 @@ def create_content():
     if not all(data.get(field) for field in required):
         return jsonify({"error": "title, type and category_id are required."}), 400
 
-    category = Category.query.get(data["catgeory_id"])
+    category = Category.query.get(data["category_id"])
     if not category:
         return jsonify({"error":"Category not found"}),404
     status = "pending"
@@ -134,18 +134,19 @@ def create_content():
         IsApproved=False
     )  
    
-   # Add the category through the many-to-many relationship
-   new_content.categories.append(category)
-   db.session.add(new_content)
-   db.session.commit()
+    # Add the category through the many-to-many relationship
+    new_content.categories.append(category)
 
-   return jsonify({
-    "id": new_content.ContentID,
-    "message": "Content submitted successfully"
-   }),201 
+    db.session.add(new_content)
+    db.session.commit()
+
+    return jsonify({
+        "id": new_content.ContentID,
+        "message": "Content submitted successfully"
+    }),201 
 
 #------------------------------ MODIFICATION------
-@content_bp.put("<int: content_id>")
+@content_bp.put("<int:content_id>")
 @jwt_required()
 @role_required("tech_writer")
 def edit_content(content_id):
@@ -158,12 +159,12 @@ def edit_content(content_id):
         }),404
 
     if item.UserID != current_user.UserID:
-        retrun jsonify({"error": "Forbidden"}),403
+        return jsonify({"error": "Forbidden"}),403
 
     data= request.get_json()
 
     item.Title=data.get("title",item.Title)
-    item.Description= data.get("body", item.Description)
+    item.Description= data.get("description", item.Description)
     item.ContentURL=data.get("url", item.ContentURL)
     item.ContentType= data.get("type", item.ContentType)
     
@@ -172,12 +173,11 @@ def edit_content(content_id):
         category = Category.query.get(
             data["category_id"]
         )
-    if not category:
-        return jsonify({
-            "Error": "Category is not found"
-        }) ,404
-
-    item.categories=[category]   
+        if not category:
+            return jsonify({
+                "Error": "Category is not found"
+            }) ,404
+        item.categories=[category]   
 
     db.session.commit()
     return jsonify({"message": "Content updated."}),200
@@ -194,14 +194,14 @@ def delete_content(content_id):
             "error": "User not found"
         }),404
 
-    if item.author_id != current_user.id and current_user.role != "admin":
+    if item.UserID != current_user.UserID and current_user.Role != "admin":
         return jsonify({"error": "Forbidden."}),403
     db.session.delete(item)
     db.session.commit()
     return jsonify({"message": "Content deleted"}), 200
 
 #------------------------APPROVE CONTENT -----------------
-@content_bp.patch("<int: content_id>/approve")
+@content_bp.patch("<int:content_id>/approve")
 @jwt_required()
 @role_required("admin", "tech_writer")
 def approve_content(content_id):
