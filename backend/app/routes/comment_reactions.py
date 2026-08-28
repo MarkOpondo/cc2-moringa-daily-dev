@@ -7,7 +7,7 @@ comment_reactions_bp = Blueprint(
     "comment_reactions",__name__)
 
     #---------------------------- React to comment --------------------------
-@comment_reactions_bp.post("comments/<int:comment_id>/reactions")
+@comment_reactions_bp.post("/comments/<int:comment_id>/reactions")
 @jwt_required()
 def react_to_comment(comment_id):
     data = request.get_json()
@@ -60,7 +60,7 @@ def remove_comment_reaction(comment_id):
         return jsonify({
             "error": "Reaction not found"
         }),404
-    db.session.add(reaction)
+    db.session.delete(reaction)
     db.session.commit()
     return jsonify({
         "message": "Comment reaction removed"

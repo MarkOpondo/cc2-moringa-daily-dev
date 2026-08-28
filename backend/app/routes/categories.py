@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required,get_jwt_identity
 from app.extensions import db
 from app.models import Category
 from app.utils import role_required
@@ -52,11 +52,11 @@ def create_category():
          "name": new_category.Name}), 201
 
 #--------------------- UPDATE CATEGORY ----------------
-@categories_bp.put("/<int: category_id")
+@categories_bp.put("/<int:category_id>")
 @jwt_required()
 @role_required("admin", "tech_writer")
 def update_category(category_id):
-    category = category.query.get_or_404(category_id)
+    category = Category.query.get_or_404(category_id)
 
     data = request.get_json()
     if not data:
@@ -65,14 +65,14 @@ def update_category(category_id):
         }),400
     if "name" in data:
         existing_category=Category.query.filter(
-            Category.Name== data["name"],
+            Category.Name == data["name"],
             Category.CategoryID != category.CategoryID
         ).first()
 
-    IF existing_category:
-    return jsonify({
-        "error": "Category already exists"
-    }) ,409       
+        if existing_category:
+            return jsonify({
+                "error": "Category already exists"
+             }) ,409       
 
     category.Name = data["name"]
     if "description" in data:
@@ -81,7 +81,7 @@ def update_category(category_id):
     
     return jsonify({
         "id": category.CategoryID,
-        "name": category.Name
+        "name": category.Name,
         "description": category.Description
     }),200
 
@@ -89,7 +89,7 @@ def update_category(category_id):
 @categories_bp.delete("/<int:category_id>")
 @jwt_required()
 @role_required("admin")
-def delete_category(category.id):
+def delete_category(category_id):
     category= Category.query.get_or_404(category_id)
     db.session.delete(category)
     db.session.commit()
