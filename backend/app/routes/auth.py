@@ -19,26 +19,25 @@ def register():
 
     if not all([username,email,password]):
         return jsonify({"error": "username, email, password are required"}),400
-        existing= User.query.filter(
-            (User.Username == username) | (User.Email == email)
-        ).first()
+    existing= User.query.filter(
+        (User.Username == username) | (User.Email == email)
+    ).first()
 
     if existing:
         return jsonify({"error": "Username or email already exists."}), 400
 
-    password_Hash= bcrypt.generate_password_hash(password).decode("utf-8")
     new_user = User(
         Username = username,
         Email= email,
-        _password_Hash= password_Hash,
         Role = "user",
         IsActive=True
-    )        
-    new_user.set_password(password)
+    )    
+
+    new_user.password_hash = password    
     db.session.add(new_user)
     db.session.flush()
 
-    new_profile=Profile(userID= new_user.UserID)
+    new_profile=Profile(UserID= new_user.UserID)
     db.session.add(new_profile)
     db.session.commit()
     return jsonify({
@@ -49,7 +48,7 @@ def register():
 #------------------------------ login -----------------
 @auth_bp.post("/login")
 def login():
-    data = reqquest.get_json()
+    data = request.get_json()
 
     if not data:
         return jsonify({"error": "No input data provided."}), 400
@@ -64,13 +63,13 @@ def login():
         return jsonify({"error": " Invalid Username or password"}), 401
     
     if not user.IsActive:
-        retrun jsonify({"error": "Account is inacive. Contact the admin"}), 403
+        return jsonify({"error": "Account is inactive. Contact the admin"}), 403
     access_token= create_access_token(identity=str(user.UserID))
 
     return jsonify({
         "token": access_token,
         "user":{
-            "id": user. UserID,
+            "id": user.UserID,
             "username": user.Username,
             "email": user.Email,
             "role": user.Role
