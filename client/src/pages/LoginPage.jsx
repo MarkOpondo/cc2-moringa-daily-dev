@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { loginUser } from '../services/authApi';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -14,14 +14,14 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!email.trim() || !password) {
-      setErrorMsg('Please enter both email and password.');
+    if (!username.trim() || !password) {
+      setErrorMsg('Please enter both username and password.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const data = await loginUser({ email, password });
+      const data = await loginUser({ username, password });
       localStorage.setItem('token', data.token);
       // Once the backend returns user info on login (id, username, role),
       // this stores it so the rest of the app knows who's logged in.
@@ -32,7 +32,7 @@ export default function LoginPage() {
       }
       navigate('/');
     } catch (err) {
-      setErrorMsg(err.message || 'Invalid Email or Password.');
+      setErrorMsg(err.message || 'Invalid Username or Password.');
     } finally {
       setIsLoading(false);
     }
@@ -51,12 +51,12 @@ export default function LoginPage() {
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">Email address</label>
+          <label className="block text-xs font-medium text-slate-300 mb-1">Username</label>
           <input 
-            type="email" 
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="student@moringa.com"
+            type="text" 
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
             className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
           />
         </div>
