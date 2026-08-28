@@ -52,7 +52,7 @@ def create_category():
          "name": new_category.Name}), 201
 
 #--------------------- UPDATE CATEGORY ----------------
-@categories_bp.put("/<int:category_id")
+@categories_bp.put("/<int:category_id>")
 @jwt_required()
 @role_required("admin", "tech_writer")
 def update_category(category_id):
@@ -65,7 +65,7 @@ def update_category(category_id):
         }),400
     if "name" in data:
         existing_category=Category.query.filter(
-            Category.Name = data["name"],
+            Category.Name == data["name"],
             Category.CategoryID != category.CategoryID
         ).first()
 
