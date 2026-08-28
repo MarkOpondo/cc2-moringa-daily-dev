@@ -27,7 +27,7 @@ def create_app(config_class=DevelopmentConfig):
     #-------------------Blueprints----------------#
     from app.routes.auth import auth_bp
     from app.routes.users import users_bp
-    from app.routes.profiles import  profiles_bp
+    from app.routes.profile import  profiles_bp
     from app.routes.categories import categories_bp
     from app.routes.content import content_bp
     from app.routes.comments import comments_bp
@@ -35,7 +35,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.routes.notifications import notifications_bp
     from app.routes.reports import reports_bp
     from app.routes.subscriptions import subscriptions_bp
-    from app.routes.comments_reactions import comments_reactions_bp
+    from app.routes.comment_reactions import comment_reactions_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(users_bp, url_prefix="/api/users")
