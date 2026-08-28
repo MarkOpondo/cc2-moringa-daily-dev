@@ -46,7 +46,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(interactions_bp, url_prefix="/api")
     app.register_blueprint(notifications_bp, url_prefix="/api/users/me/notifications")
     app.register_blueprint(subscriptions_bp,url_prefix="/api")
-    app.register_blueprint(comments_reactions_bp,url_prefix="/api")
+    app.register_blueprint(comment_reactions_bp,url_prefix="/api")
     app.register_blueprint(reports_bp, url_prefix="/api")
 
     @app.get('/')
