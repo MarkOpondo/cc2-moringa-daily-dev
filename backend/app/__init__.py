@@ -1,14 +1,14 @@
 from flask import Flask, jsonify
 
 from app.extensions import db, migrate, jwt, bcrypt, cors, ma
-from config import DevelopmentConfig
+from config import config_by_name
 
 
-def create_app(config_class=DevelopmentConfig):
+def create_app(config_class="development"):
     app = Flask(__name__)
 
     # Load configuration
-    app.config.from_object(config_class)
+    app.config.from_object(config_by_name[config_class])
 
     # Initialize extensions
     db.init_app(app)
