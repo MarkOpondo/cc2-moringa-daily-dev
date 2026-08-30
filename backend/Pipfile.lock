@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "da2485c0581a59cbccb64f6d05bd45de6075e28e143094b535a6adbc799bc456"
+            "sha256": "f1c4a35efecd5121494af24f3b336f4af7a1b62ac054ecdd26a8176b5bcd829f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -110,11 +110,18 @@
         },
         "click": {
             "hashes": [
-                "sha256:9a6cea6e60b17ebe0a44c5cc636d94f09bd66142c1cd7d8b4cd731c4917a15f6",
-                "sha256:e6f9f66136c816745b9d65817da91d61d957fb16e02e4dcd0552553c5a197b76"
+                "sha256:255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+                "sha256:ba0d2089de75ea0310e2dde03160e6ca10009947fb95a182f9b54021bb272e34"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==8.4.2"
+            "version": "==8.5.0"
+        },
+        "dotenv": {
+            "hashes": [
+                "sha256:29cf74a087b31dafdb5a446b6d7e11cbce8ed2741540e2339c69fbef92c94ce9"
+            ],
+            "index": "pypi",
+            "version": "==0.9.9"
         },
         "faker": {
             "hashes": [
@@ -141,6 +148,15 @@
             ],
             "index": "pypi",
             "version": "==1.0.1"
+        },
+        "flask-cors": {
+            "hashes": [
+                "sha256:30c5031552cd59f620ac0c8211dac45b345d3b2df310e7721879e4f46ef9c601",
+                "sha256:68fcf75693e961f3af26683b23c4b9a8fb6b64de17d20d0c37b95e8de7ab2ed8"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.9' and python_version < '4.0'",
+            "version": "==6.0.5"
         },
         "flask-jwt-extended": {
             "hashes": [
@@ -530,6 +546,15 @@
             "index": "pypi",
             "markers": "python_version >= '3.10'",
             "version": "==9.1.1"
+        },
+        "python-dotenv": {
+            "hashes": [
+                "sha256:904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+                "sha256:a20a594dabeaa385725aa239d5244871c143ecb356add8a20fcf23773a6c3a35"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.10'",
+            "version": "==1.2.3"
         },
         "pytz": {
             "hashes": [
