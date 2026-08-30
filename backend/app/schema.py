@@ -2,7 +2,7 @@ from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, fields
 from models import (User, Profile, Category,Content, Comment, CommentReaction, ContentReaction,
                     Subscription,Wishlist,Share,Notification,ContentReport
                     )
-from app import db
+from app.extensions import db
 
 class UserSchema(SQLAlchemyAutoSchema):
     class Meta:

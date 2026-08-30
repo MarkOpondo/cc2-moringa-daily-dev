@@ -1,6 +1,6 @@
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import CheckConstraint, UniqueConstraint, Index
-from app import db, bcrypt
+from app.extensions import db, bcrypt
 
 
 from datetime import datetime, timezone
