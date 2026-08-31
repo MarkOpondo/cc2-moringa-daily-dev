@@ -104,11 +104,11 @@ class Content(db.Model):
 
     __table_args__ = (
         CheckConstraint(
-            "Status IN ('Draft', 'Published', 'Archived')",
+            '\"Status\" IN (\'Draft\', \'Published\', \'Archived\')',
             name='check_valid_content_status'
         ),
         CheckConstraint(
-            "ContentType IN ('Article', 'Video', 'Audio', 'Image')",
+            '\"ContentType\" IN (\'Article\', \'Video\', \'Audio\', \'Image\')',
             name='check_valid_content_type'
         ),
     )
@@ -130,9 +130,9 @@ class Comment(db.Model):
 
     __table_args__ = (
         # Make sure a child comment doesnt have the same id as the parent comment
-        CheckConstraint('CommentID != ParentCommentID', name='check_no_self_parenting_comment'),
+        CheckConstraint('\"CommentID\" != \"ParentCommentID\"', name='check_no_self_parenting_comment'),
         # Reject empty entries
-        CheckConstraint("length(trim(Text)) > 0", name='check_comment_not_empty')
+        CheckConstraint('length(trim(\"Text\")) > 0', name='check_comment_not_empty')
     )
 
 
