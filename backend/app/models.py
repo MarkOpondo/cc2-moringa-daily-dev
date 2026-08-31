@@ -165,7 +165,7 @@ class CommentReaction(db.Model):
         # Prevent a single user from leaving multiple reactions on one comment
         UniqueConstraint('UserID', 'CommentID', name='unique_user_commentt_reaction'),
         # Speed up query counting reaction
-        Index('ix_content_reaction_lookup', 'CommentID', 'Reaction'),
+        Index('ix_comment_reaction_lookup', 'CommentID', 'Reaction'),
     )
 
 class Subscription(db.Model):
