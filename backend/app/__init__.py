@@ -1,4 +1,5 @@
 from flask import Flask, jsonify
+from flasgger import Swagger
 
 from app.extensions import db, migrate, jwt, bcrypt, cors, ma
 from config import config_by_name
@@ -6,6 +7,7 @@ from config import config_by_name
 
 def create_app(config_class="development"):
     app = Flask(__name__)
+    Swagger(app)
 
     # Load configuration
     app.config.from_object(config_by_name[config_class])
