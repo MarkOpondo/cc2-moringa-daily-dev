@@ -62,10 +62,11 @@ def list_content():
                 "id": category.CategoryID,
                 "name": category.Name
             }
+            for category in content.categories
         ],
         "created_at": (
-            content.created_at.isoformat()
-         if created_at else None
+            content.CreatedAt.isoformat()
+         if content.CreatedAt else None
          )
     }for content in items]), 200
 
@@ -90,8 +91,8 @@ def get_single_content(content_id):
             for category in item.categories
         ],
         "created_at": (
-            item.created_at.isoformat()
-         if item.created_at else None
+            item.CreatedAt.isoformat()
+         if item.CreatedAt else None
         )
     }), 200
 
@@ -118,12 +119,26 @@ def create_content():
 
     if not all(data.get(field) for field in required):
         return jsonify({"error": "title, type and category_id are required."}), 400
+        # Validate content type 
+    allowed_types =[
+        "Article",
+        "Video",
+        "Audio",
+        "Image"
+    ]    
+    if data["type"] not in allowed_types:
+        return jsonify({
+            "error": (
+                "Invalid content type",
+                "Allowed Article,Video,Audio,Image"
+            )
+        }) ,400
 
     category = Category.query.get(data["category_id"])
     if not category:
         return jsonify({"error":"Category not found"}),404
-    status = "pending"
-        # Auto-approve for admin/tech-writer: pending for regular users
+    status = "Draft"
+        # Auto-approve for admin/tech-writer: draft for regular users
     new_content = Content(
         UserID=user_id,
         Title=data["title"],
@@ -146,7 +161,7 @@ def create_content():
     }),201 
 
 #------------------------------ MODIFICATION------
-@content_bp.put("<int:content_id>")
+@content_bp.put("/<int:content_id>")
 @jwt_required()
 @role_required("tech_writer")
 def edit_content(content_id):
@@ -162,6 +177,21 @@ def edit_content(content_id):
         return jsonify({"error": "Forbidden"}),403
 
     data= request.get_json()
+    if not data:
+        return jsonify({
+            "error": "No input data provided"
+        }),400
+        if "type" in data:
+            allowed_types=[
+                "Article",
+                "Video",
+                "Audio",
+                "Image"
+            ]
+            if data["type"] in allowed_types:
+                return jsonify({
+                    "error": "Invalid Content type"
+                }),400
 
     item.Title=data.get("title",item.Title)
     item.Description= data.get("description", item.Description)
@@ -194,20 +224,20 @@ def delete_content(content_id):
             "error": "User not found"
         }),404
 
-    if item.UserID != current_user.UserID and current_user.Role != "admin":
+    if item.UserID != current_user.UserID and current_user.Role != "Admin":
         return jsonify({"error": "Forbidden."}),403
     db.session.delete(item)
     db.session.commit()
     return jsonify({"message": "Content deleted"}), 200
 
 #------------------------APPROVE CONTENT -----------------
-@content_bp.patch("<int:content_id>/approve")
+@content_bp.patch("/<int:content_id>/approve")
 @jwt_required()
-@role_required("admin", "tech_writer")
+@role_required("Admin", "tech_writer")
 def approve_content(content_id):
     item= Content.query.get_or_404(content_id)
 
-    item.status="Published"
+    item.Status="Published"
     item.IsApproved= True
 
     db.session.commit()
@@ -218,7 +248,7 @@ def approve_content(content_id):
 #--------------------------------- FLAG CONTENT ------------
 @content_bp.patch("/<int:content_id>/flag")
 @jwt_required()
-@role_required("admin", "tech_writer")
+@role_required("Admin", "tech_writer")
 def flag_content(content_id):
     item= Content.query.get_or_404(content_id)
     #The current Content model does not have a Flagged status

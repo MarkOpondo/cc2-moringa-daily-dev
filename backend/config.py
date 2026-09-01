@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -65,3 +66,5 @@ class DevelopmentConfig(Config):
 config_by_name = {
     "development": DevelopmentConfig
 }
+
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=5)

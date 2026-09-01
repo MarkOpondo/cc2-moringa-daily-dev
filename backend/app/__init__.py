@@ -7,7 +7,25 @@ from config import config_by_name
 
 def create_app(config_class="development"):
     app = Flask(__name__)
-    Swagger(app)
+    Swagger(
+        app,
+        template={
+            "swagger": "2.0",
+            "info":{
+                "title": "Moringa Daily API",
+                "description": "API documentation for Moringa Daily",
+                "version": "1.0.0"
+            },
+            "securityDefinitions":{
+                "Bearer": {
+                    "type": "apiKey",
+                    "name": "Authorization",
+                    "in": "header",
+                    "description": "Enter your JWT token"
+                }
+            }
+        }
+    )
 
     # Load configuration
     app.config.from_object(config_by_name[config_class])

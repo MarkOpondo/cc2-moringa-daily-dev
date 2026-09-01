@@ -8,7 +8,7 @@ subscriptions_bp = Blueprint("subscriptions", __name__)
 #------------------ SUBSCRIBE TO CATEGORY ------------------
 @subscriptions_bp.post("")
 @jwt_required()
-def subscribe_to_category(category_id):
+def subscribe_to_category():
     user_id = int(get_jwt_identity())
 
     data=request.get_json()
@@ -69,7 +69,7 @@ def get_my_subscriptions():
 #------------------------------ UNSUBSCRIBE -----------------------------
 @subscriptions_bp.delete("/<int:category_id>")
 @jwt_required()
-def unsubscribe_from_category(category_id):
+def unsubscribe_from_category():
     user_id = int(get_jwt_identity())
 
     subscription = Subscription.query.filter_by(

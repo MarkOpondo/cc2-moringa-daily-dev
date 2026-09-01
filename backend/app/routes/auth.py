@@ -48,6 +48,39 @@ def verify_reset_token(token):
 
 @auth_bp.post("/register")
 def register():
+    """
+    Register a new user
+    ---
+    tags:
+      - Authentication
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - email
+            - password
+          properties:
+            username:
+              type: string
+              example: ann123
+            email:
+              type: string
+              example: ann@example.com
+            password:
+              type: string
+              example: Password123
+    responses:
+      201:
+        description: User created successfully
+      400:
+        description: Invalid input
+    """
     data = request.get_json()
 
     if not data:
@@ -105,6 +138,38 @@ def register():
 
 @auth_bp.post("/login")
 def login():
+    """
+    Login 
+    user
+    ---
+    tags:
+      - Authentication
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+              example: ann123
+            password:
+              type: string
+              example: Password123
+    responses:
+      200:
+        description: Login successful
+      401:
+        description: Invalid username or password
+      403:
+        description: Account is inactive
+    """
     data = request.get_json()
 
     if not data:
@@ -156,6 +221,15 @@ def login():
 
 @auth_bp.post("/logout")
 def logout():
+    """
+    Logout user
+    ---
+    tags:
+      - Authentication
+    responses:
+      200:
+        description: Logout successful
+    """
     return jsonify({
         "message": "Logout successful."
     }), 200
@@ -167,6 +241,33 @@ def logout():
 
 @auth_bp.post("/forgot-password")
 def forgot_password():
+    """
+    Request a password reset
+    ---
+    tags:
+      - Authentication
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+          properties:
+            email:
+              type: string
+              example: testuser01@example.com
+    responses:
+      200:
+        description: Password reset request processed
+      400:
+        description: Email is required
+      500:
+        description: Unable to send password reset email
+    """
     data = request.get_json()
 
     if not data:
@@ -231,6 +332,38 @@ def forgot_password():
 
 @auth_bp.post("/reset-password")
 def reset_password():
+    """
+    Reset user password
+    ---
+    tags:
+      - Authentication
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - token
+            - password
+          properties:
+            token:
+              type: string
+              example: your-reset-token
+            password:
+              type: string
+              example: NewPassword123!
+    responses:
+      200:
+        description: Password reset successful
+      400:
+        description: Invalid input or expired token
+      404:
+        description: User not found
+    """
+
     data = request.get_json()
 
     if not data:

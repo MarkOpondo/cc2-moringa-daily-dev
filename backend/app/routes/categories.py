@@ -11,15 +11,15 @@ categories_bp = Blueprint("categories", __name__)
 def list_categories():
     categories = Category.query.all()
     return jsonify([{
-        "id": categories.CategoryID,
-        "name": categories.Name,
-        "description": categories.Description
+        "id": Category.CategoryID,
+        "name": Category.Name,
+        "description": Category.Description
     }for category in categories]), 200
 
 #----------------- CREATE CATEGORY ----------------
 @categories_bp.post("")
 @jwt_required()
-@role_required("admin", "tech_writer")
+@role_required("Admin", "tech_writer")
 def create_category():
     data = request.get_json()
     if not data:
@@ -54,7 +54,7 @@ def create_category():
 #--------------------- UPDATE CATEGORY ----------------
 @categories_bp.put("/<int:category_id>")
 @jwt_required()
-@role_required("admin", "tech_writer")
+@role_required("Admin", "tech_writer")
 def update_category(category_id):
     category = Category.query.get_or_404(category_id)
 
@@ -88,7 +88,7 @@ def update_category(category_id):
 #------------------ DELETE CATEGORY--------------------
 @categories_bp.delete("/<int:category_id>")
 @jwt_required()
-@role_required("admin")
+@role_required("Admin")
 def delete_category(category_id):
     category= Category.query.get_or_404(category_id)
     db.session.delete(category)

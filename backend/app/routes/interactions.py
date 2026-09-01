@@ -113,7 +113,7 @@ def add_to_wishlist():
     db.session.commit()
     return jsonify({"message": "Added to wishlist."}),201
 
-@interactions_bp.delete("/wishlist/<int:content_id>")
+@interactions_bp.delete("/wishlist/<int:wishlist_id>")
 @jwt_required()
 def remove_from_wishlist(wishlist_id):
     wishlist= Wishlist.query.get_or_404(wishlist_id)

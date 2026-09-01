@@ -14,6 +14,9 @@ def report_content(content_id):
         return jsonify({
             "error": "Request body is required."
         }),400
+
+    reason = data.get("reason")
+
     if not reason:
         return jsonify({
             "error": "Reason is required"
@@ -32,7 +35,7 @@ def report_content(content_id):
 #------------------------- LIST REPORTS-------------------
 @reports_bp.get("/reports")
 @jwt_required()
-@role_required("admin")
+@role_required("Admin")
 def list_reports():
     # default show unresolved. ?resolved=true for all
     status= request.args.get("status")
@@ -56,7 +59,7 @@ def list_reports():
 #------------------------------------ Resolve reports-------
 @reports_bp.patch("/reports/<int:report_id>")
 @jwt_required()
-@role_required("admin")
+@role_required("Admin")
 def resolve_report(report_id):
 
     report = ContentReport.query.get_or_404(report_id)
