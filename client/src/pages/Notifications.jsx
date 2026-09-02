@@ -24,7 +24,7 @@ export default function Notifications() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-mono text-brand-500 mb-1">// notifications</p>
-          <h1 className="text-2xl font-bold text-cream">Notifications</h1>
+          <h1 className="text-2xl font-bold text-navy">Notifications</h1>
         </div>
         {unreadCount > 0 && (
           <Button variant="ghost" size="sm" onClick={() => dispatch(markAllNotificationsRead(user.id))}>
@@ -40,20 +40,20 @@ export default function Notifications() {
           description="Subscribe to categories to hear about new posts as they're published."
         />
       ) : (
-        <div className="divide-y divide-navy-border border border-navy-border rounded-xl overflow-hidden">
+        <div className="divide-y divide-line border border-line rounded-xl overflow-hidden">
           {items.map((n) => (
             <Link
               key={n.id}
               to={n.contentId ? `/content/${n.contentId}` : "#"}
               onClick={() => !n.isRead && dispatch(markNotificationRead(n.id))}
-              className={`flex items-start gap-3 p-4 hover:bg-navy-raised transition ${
+              className={`flex items-start gap-3 p-4 hover:bg-surface transition ${
                 !n.isRead ? "bg-brand-500/5" : ""
               }`}
             >
-              <Bell className={`w-4 h-4 mt-0.5 shrink-0 ${!n.isRead ? "text-brand-500" : "text-slate-400"}`} />
+              <Bell className={`w-4 h-4 mt-0.5 shrink-0 ${!n.isRead ? "text-brand-500" : "text-muted"}`} />
               <div className="flex-1 min-w-0">
-                <p className={`text-sm ${!n.isRead ? "text-cream" : "text-slate-400"}`}>{n.message}</p>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">{timeAgo(n.createdAt)}</p>
+                <p className={`text-sm ${!n.isRead ? "text-navy" : "text-muted"}`}>{n.message}</p>
+                <p className="text-[11px] text-muted font-mono mt-0.5">{timeAgo(n.createdAt)}</p>
               </div>
               {!n.isRead && <span className="w-2 h-2 rounded-full bg-brand-500 mt-1.5 shrink-0" />}
             </Link>
@@ -63,3 +63,4 @@ export default function Notifications() {
     </div>
   );
 }
+

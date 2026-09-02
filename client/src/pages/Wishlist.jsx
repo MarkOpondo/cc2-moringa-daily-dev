@@ -31,8 +31,8 @@ export default function Wishlist() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-mono text-amber-500 mb-1">// wishlist</p>
-        <h1 className="text-2xl font-bold text-white">Saved for later</h1>
+        <p className="text-xs font-mono text-amber-600 mb-1">// wishlist</p>
+        <h1 className="text-2xl font-bold text-navy">Saved for later</h1>
       </div>
 
       {loading ? (
@@ -61,4 +61,5 @@ export default function Wishlist() {
     </div>
   );
 }
+
 

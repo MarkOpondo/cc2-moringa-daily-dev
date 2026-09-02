@@ -1,11 +1,11 @@
 export function SkeletonLine({ className = "" }) {
-  return <div className={`animate-pulse bg-navy-raised rounded ${className}`} />;
+  return <div className={`animate-pulse bg-line/70 rounded ${className}`} />;
 }
 
 export function ContentCardSkeleton() {
   return (
-    <div className="rounded-xl overflow-hidden border border-navy-border bg-navy">
-      <div className="aspect-video bg-navy-raised animate-pulse" />
+    <div className="rounded-xl overflow-hidden border border-line bg-white">
+      <div className="aspect-video bg-line/70 animate-pulse" />
       <div className="p-4 space-y-3">
         <div className="flex gap-2">
           <SkeletonLine className="h-5 w-16 rounded-full" />
@@ -18,3 +18,4 @@ export function ContentCardSkeleton() {
     </div>
   );
 }
+
