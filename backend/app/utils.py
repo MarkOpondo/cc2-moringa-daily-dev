@@ -1,41 +1,21 @@
 from functools import wraps
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity
-from app.extensions import db
 
 def role_required(*allowed_roles):
-    """
-    Decorator that checks if the cureent user's role is in the list of allowed_roles.
-    Usage:
-    @role_required("Admin")
-    @role_required("Admin","tech_writer","user")
-    """
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            from app.models import User
-
-            user_id = get_jwt_identity()
-            user = db.session.get(User, int(user_id))
-
-            print("========== ROLE DEBUG ==========")
-            print("JWT USER ID:", user_id)
-            print("DATABASE USER:", user)
-            print("DATABASE ROLE:", user.Role if user else None)
-            print("ALLOWED ROLES:", allowed_roles)
-            print("================================")
-
-            if not user:
-                return jsonify({"error": "User not found"}), 404
-
-            if user.Role not in allowed_roles:
-                return jsonify({
-                    "error": "Forbidden. Insufficient permissions.",
-                    "your_role": user.Role,
-                    "allowed_roles": allowed_roles
-                }), 403
-
+            # get_jwt_identity() will now work because @jwt_required() ran first
+            identity = get_jwt_identity() 
+            
+            # Extract user role depending on how your JWT token is structured
+            user_role = identity.get("role") if isinstance(identity, dict) else None
+            
+            # If user_role isn't in token, fetch from DB or check identity
+            if user_role and user_role not in allowed_roles:
+                return jsonify({"error": "Unauthorized access for this role"}), 403
+                
             return fn(*args, **kwargs)
-
         return wrapper
-    return decorator    
+    return decorator

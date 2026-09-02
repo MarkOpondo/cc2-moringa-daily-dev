@@ -1,85 +1,121 @@
-from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from app.extensions import db
-from app.models import Subscription, Category
+from app.models import Category, Subscription
 
 subscriptions_bp = Blueprint("subscriptions", __name__)
 
-#------------------ SUBSCRIBE TO CATEGORY ------------------
+
+def safe_get_user_id():
+    """Extract integer user ID safely from JWT identity."""
+    identity = get_jwt_identity()
+    if isinstance(identity, dict):
+        return int(identity.get("id"))
+    return int(identity)
+
+
+# ------------------ SUBSCRIBE TO CATEGORY ------------------ #
+
+
 @subscriptions_bp.post("")
 @jwt_required()
 def subscribe_to_category():
-    user_id = int(get_jwt_identity())
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
 
-    data=request.get_json()
-    if not data:
-        return jsonify({"error": "Request body is required"}),400
-    
-    category_id= data.get("category_id")
+    data = request.get_json(silent=True) or {}
+    category_id = data.get("category_id")
+
     if not category_id:
-        return jsonify({"error": "category_id is required"}),400   
+        return jsonify({"error": "category_id is required"}), 400
 
-    # checking that the category exists
-    category=Category.query.get_or_404(category_id)
+    # Verify category exists
+    category = db.session.get(Category, category_id)
+    if not category:
+        return jsonify({"error": "Category not found"}), 404
 
-    # Check if the user is already subscribed
+    # Check if already subscribed
     existing = Subscription.query.filter_by(
-        UserID=user_id,
-        CategoryID= category_id
+        UserID=user_id, CategoryID=category_id
     ).first()
+
     if existing:
-        return jsonify({
-            "error": "You already subscribed to this category"
-        }),409
-    subscription = Subscription(
-        UserID = user_id,
-        CategoryID = category_id
-    )    
+        return (
+            jsonify({"error": "You are already subscribed to this category"}),
+            409,
+        )
+
+    subscription = Subscription(UserID=user_id, CategoryID=category_id)
     db.session.add(subscription)
     db.session.commit()
-    return jsonify({
-        "message": "Subscribed successfully",
-        "subscription_id": subscription.SubscriptionID,
-        "category_id":category.CategoryID,
-        "category_name": category.Name
-    }),201
 
-#--------------------------------GET MY SUBSCRIPTIONS-------------
+    return (
+        jsonify({
+            "message": "Subscribed successfully",
+            "subscription_id": subscription.SubscriptionID,
+            "category_id": category.CategoryID,
+            "category_name": category.Name,
+        }),
+        201,
+    )
+
+
+# ------------------ GET MY SUBSCRIPTIONS ------------------ #
+
+
 @subscriptions_bp.get("")
 @jwt_required()
 def get_my_subscriptions():
-    user_id= int(get_jwt_identity())
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
 
-    subscriptions= Subscription.query.filter_by(
-        UserID=user_id
-    ).all()
-    return jsonify([
-        {
-            "subscription_id": subscription.SubscriptionID,
-            "category_id": subscription.CategoryID,
-            "CreatedAt": (
-                subscription.CreatedAt.isoformat()
-                if subscription.CreatedAt
-                else None
-            )
-        }
-        for subscription in subscriptions
-    ]),200   
+    subscriptions = Subscription.query.filter_by(UserID=user_id).all()
 
-#------------------------------ UNSUBSCRIBE -----------------------------
+    return (
+        jsonify([
+            {
+                "subscription_id": sub.SubscriptionID,
+                "category_id": sub.CategoryID,
+                "category_name": getattr(sub.category, "Name", None)
+                if hasattr(sub, "category")
+                else None,
+                "created_at": (
+                    sub.CreatedAt.isoformat() if sub.CreatedAt else None
+                ),
+            }
+            for sub in subscriptions
+        ]),
+        200,
+    )
+
+
+# ------------------ UNSUBSCRIBE ------------------ #
+
+
 @subscriptions_bp.delete("/<int:category_id>")
 @jwt_required()
-def unsubscribe_from_category():
-    user_id = int(get_jwt_identity())
+def unsubscribe_from_category(category_id):
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
 
     subscription = Subscription.query.filter_by(
-        UserID= user_id,
-        CategoryID=category_id,
-    ).first()    
+        UserID=user_id, CategoryID=category_id
+    ).first()
+
     if not subscription:
-        return jsonify({
-            "error": "You are not a subscriber to this cateory."
-        }),404
+        return (
+            jsonify({"error": "You are not subscribed to this category."}),
+            404,
+        )
+
     db.session.delete(subscription)
     db.session.commit()
-    return jsonify({"message": "Unsubscribed successfully"}),200
+
+    return jsonify({"message": "Unsubscribed successfully"}), 200

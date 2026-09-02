@@ -1,7 +1,7 @@
 from app import create_app
-from app.extensions import db
 
-app = create_app(config_class="development")
+# Passes 'development' as the config_name
+app = create_app(config_name="development")
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(host="0.0.0.0", debug=True, port=5001)

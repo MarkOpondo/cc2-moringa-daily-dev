@@ -1,54 +1,137 @@
 from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from app.extensions import db
 from app.models import Notification
 
 notifications_bp = Blueprint("notifications", __name__)
 
+
+def safe_get_user_id():
+    """Safely extract integer user ID from JWT identity."""
+    identity = get_jwt_identity()
+    if isinstance(identity, dict):
+        return int(identity.get("id"))
+    return int(identity)
+
+
+# -------------------------------------------------------------------
+# 1. GET ALL USER NOTIFICATIONS
+# -------------------------------------------------------------------
 @notifications_bp.get("")
 @jwt_required()
 def get_notifications():
-    notifs = Notification.query.filter_by(
-        UserID=int(get_jwt_identity())
-    ).order_by(Notification.CreatedAt.desc()).all()
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
 
-    return jsonify([{
-        "id": notification.NotificationID,
-        "message": notification.Message,
-        "is_read": notification.IsRead,
-        "created_at": (
-            notification.CreatedAt.isoformat()
-             if notification.CreatedAt 
-             else None
-             ),
-    }for notification in notifs]),200
-#--------------------- MARK AS READ -------------------
-@notifications_bp.patch("/<int:notification_id>/read")
-@jwt_required()
-def mark_as_read(notification_id):
+    notifs = (
+        Notification.query.filter_by(UserID=user_id)
+        .order_by(Notification.CreatedAt.desc())
+        .all()
+    )
 
-    notif = Notification.query.get_or_404(notification_id)
+    unread_count = sum(1 for n in notifs if not n.IsRead)
 
-    if notif.UserID != int(get_jwt_identity()):
-        return jsonify({"error": "Forbidden"}),403
-    notif.IsRead=True
-    db.session.commit()
-    return jsonify({
-        "message": "Notification marked as read. "}), 200    
+    return (
+        jsonify(
+            {
+                "unread_count": unread_count,
+                "notifications": [
+                    {
+                        "id": notification.NotificationID,
+                        "notification_id": notification.NotificationID,
+                        "message": notification.Message,
+                        "is_read": notification.IsRead,
+                        "content_id": getattr(notification, "ContentID", None),
+                        "created_at": (
+                            notification.CreatedAt.isoformat()
+                            if notification.CreatedAt
+                            else None
+                        ),
+                    }
+                    for notification in notifs
+                ],
+            }
+        ),
+        200,
+    )
 
-#------------------------------ MARK ALL AS READ-------------------
+
+# -------------------------------------------------------------------
+# 2. MARK ALL NOTIFICATIONS AS READ
+#    (Must be defined BEFORE /<int:notification_id> to avoid route conflict)
+# -------------------------------------------------------------------
 @notifications_bp.patch("/read-all")
 @jwt_required()
 def mark_all_as_read():
-    user_id = int(get_jwt_identity())
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
 
-    notifications = Notification.query.filter_by(
-        UserID=user_id,
-        IsRead=False
-    ).all()
-    for notification in notifications:
-        notification.IsRead =True
+    # Bulk update for higher database efficiency
+    updated_count = (
+        Notification.query.filter_by(UserID=user_id, IsRead=False)
+        .update({Notification.IsRead: True}, synchronize_session=False)
+    )
     db.session.commit()
-    return jsonify({
-        "message": "All notifications marked as read"
-    }),200   
+
+    return (
+        jsonify(
+            {
+                "message": "All notifications marked as read.",
+                "updated_count": updated_count,
+            }
+        ),
+        200,
+    )
+
+
+# -------------------------------------------------------------------
+# 3. MARK A SINGLE NOTIFICATION AS READ
+# -------------------------------------------------------------------
+@notifications_bp.patch("/<int:notification_id>/read")
+@jwt_required()
+def mark_as_read(notification_id):
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
+
+    notif = db.session.get(Notification, notification_id)
+    if not notif:
+        return jsonify({"error": "Notification not found"}), 404
+
+    if notif.UserID != user_id:
+        return jsonify({"error": "Forbidden: Access denied"}), 403
+
+    notif.IsRead = True
+    db.session.commit()
+
+    return jsonify({"message": "Notification marked as read."}), 200
+
+
+# -------------------------------------------------------------------
+# 4. DELETE A NOTIFICATION
+# -------------------------------------------------------------------
+@notifications_bp.delete("/<int:notification_id>")
+@jwt_required()
+def delete_notification(notification_id):
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
+
+    notif = db.session.get(Notification, notification_id)
+    if not notif:
+        return jsonify({"error": "Notification not found"}), 404
+
+    if notif.UserID != user_id:
+        return jsonify({"error": "Forbidden: Access denied"}), 403
+
+    db.session.delete(notif)
+    db.session.commit()
+
+    return jsonify({"message": "Notification deleted successfully."}), 200
