@@ -46,14 +46,34 @@ export default function Home() {
 
   return (
     <div className="space-y-6">
-      {/* Category filter tabs */}
-      <div className="flex items-center gap-6 overflow-x-auto border-b border-navy-border -mx-1 px-1">
+      {/* Hero band — peach → coral gradient with a curved bottom edge,
+          mirroring moringaschool.com's homepage hero. */}
+      <div className="relative -mx-4 sm:-mx-6 -mt-6 px-4 sm:px-6 pt-10 pb-16 overflow-hidden bg-gradient-to-b from-hero-from via-hero-via to-hero-to">
+        <h1 className="text-2xl sm:text-3xl text-navy max-w-2xl">
+          What's new in tech today
+        </h1>
+        <p className="text-navy/70 text-sm sm:text-base max-w-xl mt-2">
+          Articles, videos, and advice from the Moringa School community — alumni, staff, and industry experts.
+        </p>
+        <svg
+          className="absolute -bottom-px left-0 w-full text-paper"
+          viewBox="0 0 1440 60"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path fill="currentColor" d="M0,32 C360,64 1080,0 1440,32 L1440,60 L0,60 Z" />
+        </svg>
+      </div>
+
+      {/* Category filter pills — rounded chips like moringaschool.com's
+          course-type selector (Software Engineering / Data / Cyber…). */}
+      <div className="flex items-center gap-3 overflow-x-auto -mx-1 px-1 py-1">
         <button
           onClick={() => setActiveCategory(null)}
-          className={`shrink-0 pb-3 text-sm font-medium border-b-2 -mb-px transition ${
+          className={`shrink-0 px-5 py-2 rounded-full text-sm font-semibold border transition ${
             !activeCategory
-              ? "border-brand-500 text-brand-600"
-              : "border-transparent text-slate-400 hover:text-cream"
+              ? "border-brand-500 text-brand-600 bg-white"
+              : "border-line text-navy/60 bg-white hover:border-navy/30 hover:text-navy"
           }`}
         >
           All
@@ -65,10 +85,10 @@ export default function Home() {
             <button
               key={categoryId}
               onClick={() => setActiveCategory(categoryId)}
-              className={`shrink-0 pb-3 text-sm font-medium border-b-2 -mb-px transition ${
+              className={`shrink-0 px-5 py-2 rounded-full text-sm font-semibold border transition ${
                 activeCategory === categoryId
-                  ? "border-brand-500 text-brand-600"
-                  : "border-transparent text-slate-400 hover:text-cream"
+                  ? "border-brand-500 text-brand-600 bg-white"
+                  : "border-line text-navy/60 bg-white hover:border-navy/30 hover:text-navy"
               }`}
             >
               {categoryName}
@@ -98,7 +118,7 @@ export default function Home() {
         <div className="space-y-8">
           {recommended.length > 0 && (
             <section className="space-y-3">
-              <p className="text-xs font-medium text-slate-400">Recommended for you</p>
+              <p className="text-xs font-medium text-muted">Recommended for you</p>
               <div className="grid sm:grid-cols-2 gap-5">
                 {recommended.map((item) => (
                   <ContentCard key={item.id ?? item.ContentID} item={item} />

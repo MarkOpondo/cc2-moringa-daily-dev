@@ -28,8 +28,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-center text-cream">Reset Password</h2>
-      <p className="text-xs text-slate-400 text-center mt-1">Enter your registered email to receive instructions.</p>
+      <h2 className="text-2xl font-bold text-center text-navy">Reset Password</h2>
+      <p className="text-xs text-muted text-center mt-1">Enter your registered email to receive instructions.</p>
 
       {statusMsg && (
         <div className="mt-4 p-3 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-600 text-xs text-center">
@@ -44,26 +44,26 @@ export default function ForgotPasswordPage() {
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">Email address</label>
+          <label className="block text-xs font-medium text-navy/70 mb-1">Email address</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="student@moringa.com"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
           />
         </div>
 
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold rounded-lg transition duration-200 disabled:opacity-50"
+          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition duration-200 disabled:opacity-50"
         >
           {isLoading ? 'Sending…' : 'Send Reset Link'}
         </button>
       </form>
 
-      <p className="text-xs text-center text-slate-400 mt-6">
+      <p className="text-xs text-center text-muted mt-6">
         <Link to="/login" className="text-brand-500 font-semibold hover:underline">
           ← Back to Login
         </Link>
@@ -71,3 +71,4 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
+

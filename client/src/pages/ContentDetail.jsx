@@ -148,7 +148,7 @@ export default function ContentDetail() {
   }
 
   if (loading) return <ContentCardSkeleton />;
-  if (!item) return <p className="text-slate-400 p-4">This post couldn't be found.</p>;
+  if (!item) return <p className="text-muted p-4">This post couldn't be found.</p>;
 
   // Flexible field mapping between frontend and backend
   const categoryName = item.categories?.[0]?.name || item.category?.name || "General";
@@ -162,25 +162,25 @@ export default function ContentDetail() {
   return (
     <article className="space-y-8">
       <div>
-        <Link to="/" className="text-xs text-slate-400 hover:text-slate-300">← Back to feed</Link>
+        <Link to="/" className="text-xs text-muted hover:text-navy">← Back to feed</Link>
 
         <div className="flex items-center gap-2 mt-4 mb-2">
           <span className={`text-[11px] font-mono uppercase tracking-wide ${colors.text}`}>{categoryName}</span>
-          <span className="text-slate-300">·</span>
-          <TypeIcon className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px] text-slate-400 capitalize">{item.type}</span>
+          <span className="text-navy/70">·</span>
+          <TypeIcon className="w-3.5 h-3.5 text-muted" />
+          <span className="text-[11px] text-muted capitalize">{item.type}</span>
         </div>
 
-        <h1 className="text-3xl font-display font-bold text-cream leading-tight">{item.title}</h1>
+        <h1 className="text-3xl font-display font-bold text-navy leading-tight">{item.title}</h1>
 
         <div className="flex items-center gap-2 mt-4">
           <Avatar username={authorName} role={item.author?.role} />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-cream">{authorName}</span>
+              <span className="text-sm font-medium text-navy">{authorName}</span>
               <RoleBadge role={item.author?.role} />
             </div>
-            <span className="text-[11px] text-slate-400 font-mono">{timeAgo(createdAt)}</span>
+            <span className="text-[11px] text-muted font-mono">{timeAgo(createdAt)}</span>
           </div>
         </div>
       </div>
@@ -189,17 +189,17 @@ export default function ContentDetail() {
         <MediaPlayer type={item.type} url={mediaUrl} />
       )}
 
-      <div className="prose-content text-slate-300 leading-relaxed whitespace-pre-line text-[15px]">
+      <div className="prose-content text-navy/70 leading-relaxed whitespace-pre-line text-[15px]">
         {bodyText}
       </div>
 
-      <div className="flex items-center gap-2 py-4 border-y border-navy-border">
+      <div className="flex items-center gap-2 py-4 border-y border-line">
         <button
           onClick={() => handleReact("like")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
             reactionState.userReaction === "like"
               ? "bg-brand-500/10 border-brand-500/40 text-brand-600"
-              : "border-navy-border text-slate-400 hover:border-navy-border"
+              : "border-line text-muted hover:border-navy/30"
           }`}
         >
           <ThumbsUp className="w-3.5 h-3.5" /> {reactionState.likes || 0}
@@ -209,7 +209,7 @@ export default function ContentDetail() {
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
             reactionState.userReaction === "dislike"
               ? "bg-red-500/10 border-red-500/40 text-red-400"
-              : "border-navy-border text-slate-400 hover:border-navy-border"
+              : "border-line text-muted hover:border-navy/30"
           }`}
         >
           <ThumbsDown className="w-3.5 h-3.5" /> {reactionState.dislikes || 0}
@@ -217,29 +217,29 @@ export default function ContentDetail() {
         <button
           onClick={handleWishlist}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
-            saved ? "bg-brand-500/10 border-brand-500/40 text-brand-600" : "border-navy-border text-slate-400 hover:border-navy-border"
+            saved ? "bg-brand-500/10 border-brand-500/40 text-brand-600" : "border-line text-muted hover:border-navy/30"
           }`}
         >
           <Bookmark className="w-3.5 h-3.5" /> {saved ? "Saved" : "Save"}
         </button>
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-navy-border text-slate-400 hover:border-navy-border transition"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-line text-muted hover:border-navy/30 transition"
         >
           {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
           {copied ? "Link copied" : "Share"}
         </button>
         <button
           onClick={handleReport}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-red-400 ml-auto"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-red-400 ml-auto"
         >
           <Flag className="w-3.5 h-3.5" /> Report
         </button>
       </div>
 
       <section className="space-y-5">
-        <h2 className="text-sm font-semibold text-slate-300">
-          Discussion <span className="text-slate-400 font-mono">({comments.length})</span>
+        <h2 className="text-sm font-semibold text-navy/70">
+          Discussion <span className="text-muted font-mono">({comments.length})</span>
         </h2>
 
         {user ? (
@@ -249,19 +249,19 @@ export default function ContentDetail() {
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Add to the discussion…"
-              className="flex-1 px-3.5 py-2 rounded-lg bg-navy-raised border border-navy-border text-sm text-cream placeholder:text-slate-400 focus:outline-none focus:border-brand-500"
+              className="flex-1 px-3.5 py-2 rounded-lg bg-surface border border-line text-sm text-navy placeholder:text-navy/40 focus:outline-none focus:border-brand-500"
             />
-            <button type="submit" className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-slate-950 text-xs font-semibold rounded-lg">
+            <button type="submit" className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg">
               Post
             </button>
           </form>
         ) : (
-          <p className="text-xs text-slate-400">Log in to leave a comment.</p>
+          <p className="text-xs text-muted">Log in to leave a comment.</p>
         )}
 
         <div className="space-y-5">
           {comments.length === 0 ? (
-            <p className="text-sm text-slate-400">No comments yet — start the discussion.</p>
+            <p className="text-sm text-muted">No comments yet — start the discussion.</p>
           ) : (
             comments.map((comment) => (
               <CommentThread

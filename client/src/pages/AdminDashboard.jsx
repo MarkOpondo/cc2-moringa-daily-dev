@@ -17,17 +17,17 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-mono text-sky-400 mb-1">// admin</p>
-        <h1 className="text-2xl font-bold text-cream">Admin dashboard</h1>
+        <p className="text-xs font-mono text-sky-600 mb-1">// admin</p>
+        <h1 className="text-2xl font-bold text-navy">Admin dashboard</h1>
       </div>
 
-      <div className="flex gap-1 border-b border-navy-border">
+      <div className="flex gap-1 border-b border-line">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 -mb-px transition ${
-              tab === id ? "border-sky-400 text-sky-400" : "border-transparent text-slate-400 hover:text-slate-300"
+              tab === id ? "border-sky-600 text-sky-600" : "border-transparent text-muted hover:text-navy"
             }`}
           >
             <Icon className="w-3.5 h-3.5" /> {label}
@@ -72,21 +72,21 @@ function ContentQueueTab() {
   return (
     <div className="space-y-3">
       {items.map((item) => (
-        <div key={item.id} className="p-4 rounded-xl border border-navy-border bg-navy">
+        <div key={item.id} className="p-4 rounded-xl border border-line bg-white">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] font-mono uppercase text-slate-400">{item.category?.name}</span>
+                <span className="text-[11px] font-mono uppercase text-muted">{item.category?.name}</span>
                 <span
                   className={`text-[10px] font-mono uppercase rounded px-1.5 py-0.5 border ${
-                    item.status === "flagged" ? "text-red-400 border-red-500/30" : "text-amber-400 border-amber-500/30"
+                    item.status === "flagged" ? "text-red-600 border-red-300" : "text-amber-600 border-amber-400"
                   }`}
                 >
                   {item.status}
                 </span>
               </div>
-              <h3 className="font-display font-semibold text-cream">{item.title}</h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <h3 className="font-display font-semibold text-navy">{item.title}</h3>
+              <p className="text-xs text-muted mt-1">
                 by {item.author?.username} · {timeAgo(item.createdAt)}
               </p>
             </div>
@@ -132,9 +132,9 @@ function UsersTab() {
   if (loading) return null;
 
   return (
-    <div className="border border-navy-border rounded-xl overflow-hidden">
+    <div className="border border-line rounded-xl overflow-hidden">
       <table className="w-full text-sm">
-        <thead className="bg-navy-raised/95 text-slate-400 text-[11px] uppercase font-mono">
+        <thead className="bg-surface/95 text-muted text-[11px] uppercase font-mono">
           <tr>
             <th className="text-left px-4 py-2.5 font-medium">Username</th>
             <th className="text-left px-4 py-2.5 font-medium">Role</th>
@@ -142,13 +142,13 @@ function UsersTab() {
             <th className="text-right px-4 py-2.5 font-medium">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-navy-border">
+        <tbody className="divide-y divide-line">
           {users.map((u) => (
             <tr key={u.id}>
-              <td className="px-4 py-3 text-cream">{u.username}</td>
+              <td className="px-4 py-3 text-navy">{u.username}</td>
               <td className={`px-4 py-3 font-mono text-xs ${roleColorClass(u.role)}`}>{roleLabel(u.role)}</td>
               <td className="px-4 py-3">
-                <span className={`text-xs font-mono ${u.isActive ? "text-emerald-400" : "text-slate-400"}`}>
+                <span className={`text-xs font-mono ${u.isActive ? "text-emerald-400" : "text-muted"}`}>
                   {u.isActive ? "Active" : "Deactivated"}
                 </span>
               </td>
@@ -198,12 +198,12 @@ function ReportsTab() {
   return (
     <div className="space-y-3">
       {reports.map((r) => (
-        <div key={r.id} className="p-4 rounded-xl border border-navy-border bg-navy">
+        <div key={r.id} className="p-4 rounded-xl border border-line bg-white">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-cream">{r.content?.title}</p>
-              <p className="text-xs text-slate-400 mt-1">Reported by {r.reporter?.username} · {timeAgo(r.createdAt)}</p>
-              <p className="text-xs text-slate-400 mt-2 italic">"{r.reason}"</p>
+              <p className="text-sm text-navy">{r.content?.title}</p>
+              <p className="text-xs text-muted mt-1">Reported by {r.reporter?.username} · {timeAgo(r.createdAt)}</p>
+              <p className="text-xs text-muted mt-2 italic">"{r.reason}"</p>
             </div>
             {r.status === "open" ? (
               <button
@@ -213,7 +213,7 @@ function ReportsTab() {
                 Mark resolved
               </button>
             ) : (
-              <span className="text-[11px] font-mono text-slate-400 shrink-0">Resolved</span>
+              <span className="text-[11px] font-mono text-muted shrink-0">Resolved</span>
             )}
           </div>
         </div>
@@ -221,3 +221,4 @@ function ReportsTab() {
     </div>
   );
 }
+

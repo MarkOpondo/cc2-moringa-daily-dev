@@ -74,8 +74,8 @@ export default function SignUpPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-center text-cream">Create Account</h2>
-      <p className="text-xs text-slate-400 text-center mt-1">Join Moringa Daily Dev today.</p>
+      <h2 className="text-2xl font-bold text-center text-navy">Create Account</h2>
+      <p className="text-xs text-muted text-center mt-1">Join Moringa Daily Dev today.</p>
 
       {errorMsg && (
         <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
@@ -85,31 +85,31 @@ export default function SignUpPage() {
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">Username</label>
+          <label className="block text-xs font-medium text-navy/70 mb-1">Username</label>
           <input 
             type="text" 
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="moringa_dev"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">Email address</label>
+          <label className="block text-xs font-medium text-navy/70 mb-1">Email address</label>
           <input 
             type="email" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="student@moringa.com"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
           />
         </div>
 
         {/* PASSWORD FIELD */}
         <div>
           <div className="flex justify-between items-center mb-1">
-            <label className="block text-xs font-medium text-slate-300">Password</label>
+            <label className="block text-xs font-medium text-navy/70">Password</label>
             <button 
               type="button" 
               onClick={handleAutoGenerate} 
@@ -129,14 +129,14 @@ export default function SignUpPage() {
                 setShowChecklist(true);
               }}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
             />
             
             {/* Hide/Unhide Toggle Button */}
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cream transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-navy transition"
               title={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
@@ -152,20 +152,20 @@ export default function SignUpPage() {
         {showChecklist && (
           <div 
             onClick={() => setShowChecklist(false)}
-            className="p-3 bg-navy/90 border border-navy-border rounded-lg text-xs space-y-1.5 cursor-pointer hover:border-navy-border transition"
+            className="p-3 bg-white/90 border border-line rounded-lg text-xs space-y-1.5 cursor-pointer hover:border-navy/30 transition"
             title="Click anywhere inside to dismiss"
           >
-            <div className="flex justify-between items-center text-slate-400 font-medium mb-1">
+            <div className="flex justify-between items-center text-muted font-medium mb-1">
               <span>Your password must contain:</span>
-              <span className="text-[10px] text-slate-400">(Click box to dismiss)</span>
+              <span className="text-[10px] text-muted">(Click box to dismiss)</span>
             </div>
             
-            <div className={`flex items-center space-x-2 ${hasMinLength ? 'text-emerald-400' : 'text-slate-400'}`}>
+            <div className={`flex items-center space-x-2 ${hasMinLength ? 'text-emerald-400' : 'text-muted'}`}>
               <span>{hasMinLength ? '✓' : '•'}</span>
               <span>At least 8 characters</span>
             </div>
 
-            <div className={`flex items-center space-x-2 ${(hasLower && hasUpper && hasNumber && hasSpecial) ? 'text-emerald-400' : 'text-slate-400'}`}>
+            <div className={`flex items-center space-x-2 ${(hasLower && hasUpper && hasNumber && hasSpecial) ? 'text-emerald-400' : 'text-muted'}`}>
               <span>{(hasLower && hasUpper && hasNumber && hasSpecial) ? '✓' : '•'}</span>
               <span>Includes lowercase, uppercase, number, & special char</span>
             </div>
@@ -174,20 +174,20 @@ export default function SignUpPage() {
 
         {/* CONFIRM PASSWORD FIELD */}
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">Confirm Password</label>
+          <label className="block text-xs font-medium text-navy/70 mb-1">Confirm Password</label>
           <div className="relative">
             <input 
               type={showConfirmPassword ? "text" : "password"} 
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
             />
             
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cream transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-navy transition"
               title={showConfirmPassword ? "Hide password" : "Show password"}
             >
               {showConfirmPassword ? (
@@ -202,13 +202,13 @@ export default function SignUpPage() {
         <button 
           type="submit" 
           disabled={isLoading}
-          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold rounded-lg transition duration-200 disabled:opacity-50"
+          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition duration-200 disabled:opacity-50"
         >
           {isLoading ? 'Creating Account...' : 'Sign Up'}
         </button>
       </form>
 
-      <p className="text-xs text-center text-slate-400 mt-6">
+      <p className="text-xs text-center text-muted mt-6">
         Already have an account?{' '}
         <Link to="/login" className="text-brand-500 font-semibold hover:underline">
           Log in

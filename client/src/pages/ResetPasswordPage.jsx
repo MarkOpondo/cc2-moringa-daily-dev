@@ -43,8 +43,8 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-cream">Invalid reset link</h2>
-        <p className="text-xs text-slate-400 mt-2">
+        <h2 className="text-2xl font-bold text-navy">Invalid reset link</h2>
+        <p className="text-xs text-muted mt-2">
           This link is missing its reset token. Request a new one from the login page.
         </p>
         <Link to="/forgot-password" className="text-brand-500 font-semibold text-xs hover:underline mt-4 inline-block">
@@ -56,8 +56,8 @@ export default function ResetPasswordPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-center text-cream">Set a new password</h2>
-      <p className="text-xs text-slate-400 text-center mt-1">Choose a new password for your account.</p>
+      <h2 className="text-2xl font-bold text-center text-navy">Set a new password</h2>
+      <p className="text-xs text-muted text-center mt-1">Choose a new password for your account.</p>
 
       {error && (
         <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
@@ -67,35 +67,35 @@ export default function ResetPasswordPage() {
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">New password</label>
+          <label className="block text-xs font-medium text-navy/70 mb-1">New password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 8 characters"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">Confirm new password</label>
+          <label className="block text-xs font-medium text-navy/70 mb-1">Confirm new password</label>
           <input
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
           />
         </div>
 
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold rounded-lg transition duration-200 disabled:opacity-50"
+          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition duration-200 disabled:opacity-50"
         >
           {isLoading ? 'Saving…' : 'Reset Password'}
         </button>
       </form>
 
-      <p className="text-xs text-center text-slate-400 mt-6">
+      <p className="text-xs text-center text-muted mt-6">
         <Link to="/login" className="text-brand-500 font-semibold hover:underline">
           ← Back to Login
         </Link>

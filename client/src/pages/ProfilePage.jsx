@@ -63,7 +63,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <p className="text-slate-400 text-sm">Loading profile...</p>
+        <p className="text-muted text-sm">Loading profile...</p>
       </div>
     );
   }
@@ -93,59 +93,59 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <div className="bg-navy-raised border border-navy-border rounded-xl p-6 space-y-4">
+        <div className="bg-surface border border-line rounded-xl p-6 space-y-4">
           <div>
-            <label className="block text-xs text-slate-400">Username</label>
-            <p className="text-base font-semibold text-cream">{profile.username}</p>
+            <label className="block text-xs text-muted">Username</label>
+            <p className="text-base font-semibold text-navy">{profile.username}</p>
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400">Email</label>
-            <p className="text-base font-semibold text-cream">{profile.email}</p>
+            <label className="block text-xs text-muted">Email</label>
+            <p className="text-base font-semibold text-navy">{profile.email}</p>
           </div>
 
           {isEditing ? (
             <form onSubmit={handleSave} className="space-y-4 pt-2">
               <div>
-                <label className="block text-xs text-slate-300 mb-1">Bio</label>
+                <label className="block text-xs text-navy/70 mb-1">Bio</label>
                 <textarea
                   value={profile.bio}
                   onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-line text-sm text-navy focus:outline-none focus:border-brand-500"
                   rows="3"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-slate-300 mb-1">Skills / Tech Stack</label>
+                <label className="block text-xs text-navy/70 mb-1">Skills / Tech Stack</label>
                 <input
                   type="text"
                   value={profile.skills}
                   onChange={(e) => setProfile({ ...profile, skills: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-line text-sm text-navy focus:outline-none focus:border-brand-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-slate-300 mb-1">GitHub Profile URL</label>
+                <label className="block text-xs text-navy/70 mb-1">GitHub Profile URL</label>
                 <input
                   type="url"
                   value={profile.github_url}
                   onChange={(e) => setProfile({ ...profile, github_url: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-line text-sm text-navy focus:outline-none focus:border-brand-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-slate-300 mb-1">Interests</label>
+                <label className="block text-xs text-navy/70 mb-1">Interests</label>
                 <input
                   type="text"
                   value={profile.interests}
                   onChange={(e) => setProfile({ ...profile, interests: e.target.value })}
                   placeholder="Comma-separated, e.g. DevOps, Frontend, Career"
-                  className="w-full px-3 py-2 rounded-lg bg-navy border border-navy-border text-sm text-cream focus:outline-none focus:border-brand-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-line text-sm text-navy focus:outline-none focus:border-brand-500"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-muted mt-1">
                   Used to personalize your recommended feed and subscription suggestions.
                 </p>
               </div>
@@ -153,33 +153,33 @@ export default function ProfilePage() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold text-xs rounded-lg transition"
+                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs rounded-lg transition"
                 >
                   Save Changes
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-navy-raised hover:bg-navy-borderLight text-slate-300 text-xs rounded-lg transition"
+                  className="px-4 py-2 bg-surface hover:bg-line/60 text-navy/70 text-xs rounded-lg transition"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="space-y-4 pt-2 border-t border-navy-border">
+            <div className="space-y-4 pt-2 border-t border-line">
               <div>
-                <label className="block text-xs text-slate-400">Bio</label>
-                <p className="text-sm text-slate-300">{profile.bio || 'No bio added yet.'}</p>
+                <label className="block text-xs text-muted">Bio</label>
+                <p className="text-sm text-navy/70">{profile.bio || 'No bio added yet.'}</p>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400">Skills</label>
-                <p className="text-sm text-slate-300">{profile.skills || 'No skills listed yet.'}</p>
+                <label className="block text-xs text-muted">Skills</label>
+                <p className="text-sm text-navy/70">{profile.skills || 'No skills listed yet.'}</p>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400">GitHub</label>
+                <label className="block text-xs text-muted">GitHub</label>
                 {profile.github_url ? (
                   <a
                     href={profile.github_url}
@@ -190,31 +190,31 @@ export default function ProfilePage() {
                     {profile.github_url}
                   </a>
                 ) : (
-                  <p className="text-sm text-slate-300">Not provided</p>
+                  <p className="text-sm text-navy/70">Not provided</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Interests</label>
+                <label className="block text-xs text-muted mb-1.5">Interests</label>
                 {profile.interests ? (
                   <div className="flex flex-wrap gap-1.5">
                     {profile.interests.split(',').map((tag) => tag.trim()).filter(Boolean).map((tag) => (
                       <span
                         key={tag}
-                        className="text-[11px] font-mono px-2 py-1 rounded-full bg-navy-raised text-slate-300 border border-navy-border"
+                        className="text-[11px] font-mono px-2 py-1 rounded-full bg-surface text-navy/70 border border-line"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-300">No interests added yet.</p>
+                  <p className="text-sm text-navy/70">No interests added yet.</p>
                 )}
               </div>
 
               <button
                 onClick={() => setIsEditing(true)}
-                className="mt-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold text-xs rounded-lg transition"
+                className="mt-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs rounded-lg transition"
               >
                 Edit Profile
               </button>

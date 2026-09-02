@@ -29,7 +29,7 @@ export default function AppShell() {
   }
 
   return (
-    <div className="bg-navy min-h-screen">
+    <div className="bg-paper min-h-screen">
       <Topbar search={searchParams.get("q") || ""} onSearchChange={handleSearchChange} />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         <Outlet />
@@ -37,3 +37,4 @@ export default function AppShell() {
     </div>
   );
 }
+
