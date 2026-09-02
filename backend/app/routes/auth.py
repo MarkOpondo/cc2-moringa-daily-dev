@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
@@ -11,9 +10,7 @@ from app.email_service import send_password_reset_email
 auth_bp = Blueprint("auth", __name__)
 
 
-
 # PASSWORD RESET TOKEN HELPERS
-
 
 def generate_reset_token(email):
     serializer = URLSafeTimedSerializer(
@@ -42,9 +39,7 @@ def verify_reset_token(token):
         return None
 
 
-
 # REGISTER
-
 
 @auth_bp.post("/register")
 def register():
@@ -99,9 +94,7 @@ def register():
     }), 201
 
 
-
 # LOGIN
-
 
 @auth_bp.post("/login")
 def login():
@@ -150,9 +143,7 @@ def login():
     }), 200
 
 
-
 # LOGOUT
-
 
 @auth_bp.post("/logout")
 def logout():
@@ -161,9 +152,7 @@ def logout():
     }), 200
 
 
-
 # FORGOT PASSWORD
-
 
 @auth_bp.post("/forgot-password")
 def forgot_password():
@@ -185,8 +174,9 @@ def forgot_password():
         Email=email
     ).first()
 
-    # Do not reveal whether an email exists in the database.
+    # If user is not found in database, log warning and exit safely
     if not user:
+        print(f"\n[DEV WARNING] Password reset requested for '{email}', but this email does not exist in the database!\n")
         return jsonify({
             "message": (
                 "If an account with that email exists, "
@@ -201,6 +191,12 @@ def forgot_password():
     reset_url = (
         f"{frontend_url}/reset-password?token={token}"
     )
+
+    # Print link directly to terminal for immediate development testing
+    print(f"\n=======================================================")
+    print(f"[DEV RESET LINK FOR {user.Email}]:")
+    print(f"{reset_url}")
+    print(f"=======================================================\n")
 
     try:
         send_password_reset_email(
@@ -225,9 +221,7 @@ def forgot_password():
     }), 200
 
 
-
 # RESET PASSWORD
-
 
 @auth_bp.post("/reset-password")
 def reset_password():
@@ -248,7 +242,7 @@ def reset_password():
 
     if len(password) < 8:
         return jsonify({
-            "error": "Password must be at least 8 characters."
+            "error": "Password must be at least 8 characters long."
         }), 400
 
     email = verify_reset_token(token)
@@ -266,6 +260,12 @@ def reset_password():
         return jsonify({
             "error": "User not found."
         }), 404
+
+    # Rule: Check if the user is attempting to use their current existing password
+    if user.authenticate(password):
+        return jsonify({
+            "error": "New password cannot be the same as your current password."
+        }), 400
 
     user.password_hash = password
 

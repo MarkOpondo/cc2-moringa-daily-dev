@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 import { Rss } from "lucide-react";
 import { listContent } from "../services/contentApi";
+import { fetchCategories } from "../features/categories/categoriesSlice";
 import ContentCard from "../components/content/ContentCard";
 import { ContentCardSkeleton } from "../components/ui/Skeleton";
 import EmptyState from "../components/ui/EmptyState";
 
 export default function Home() {
-  const categories = useSelector((state) => state.categories.items);
-  const subscribedIds = useSelector((state) => state.categories.subscribedIds);
+  const dispatch = useDispatch();
+  const categories = useSelector((state) => state.categories.items || []);
+  const subscribedIds = useSelector((state) => state.categories.subscribedIds || []);
   const [searchParams] = useSearchParams();
   const search = searchParams.get("q") || "";
 
@@ -17,21 +19,34 @@ export default function Home() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch categories from backend on component mount
+  useEffect(() => {
+    dispatch(fetchCategories());
+  }, [dispatch]);
+
+  // Fetch public content items whenever search query or selected category changes
   useEffect(() => {
     setLoading(true);
     listContent({ categoryId: activeCategory, search })
-      .then(setItems)
+      .then((data) => setItems(Array.isArray(data) ? data : []))
+      .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [activeCategory, search]);
 
   const recommended = !search && !activeCategory
-    ? items.filter((i) => subscribedIds.includes(i.categoryId)).slice(0, 2)
+    ? items.filter((i) => {
+        const catId = i.categoryId ?? i.category_id ?? i.CategoryID;
+        return subscribedIds.includes(catId);
+      }).slice(0, 2)
     : [];
-  const feedItems = recommended.length ? items.filter((i) => !recommended.includes(i)) : items;
+    
+  const feedItems = recommended.length 
+    ? items.filter((i) => !recommended.includes(i)) 
+    : items;
 
   return (
     <div className="space-y-6">
-      {/* Horizontal category tabs, underline-style with the active tab in green */}
+      {/* Category filter tabs */}
       <div className="flex items-center gap-6 overflow-x-auto border-b border-navy-border -mx-1 px-1">
         <button
           onClick={() => setActiveCategory(null)}
@@ -43,21 +58,26 @@ export default function Home() {
         >
           All
         </button>
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
-            className={`shrink-0 pb-3 text-sm font-medium border-b-2 -mb-px transition ${
-              activeCategory === cat.id
-                ? "border-brand-500 text-brand-600"
-                : "border-transparent text-slate-400 hover:text-cream"
-            }`}
-          >
-            {cat.name}
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const categoryId = cat.id ?? cat.CategoryID;
+          const categoryName = cat.name ?? cat.Name;
+          return (
+            <button
+              key={categoryId}
+              onClick={() => setActiveCategory(categoryId)}
+              className={`shrink-0 pb-3 text-sm font-medium border-b-2 -mb-px transition ${
+                activeCategory === categoryId
+                  ? "border-brand-500 text-brand-600"
+                  : "border-transparent text-slate-400 hover:text-cream"
+              }`}
+            >
+              {categoryName}
+            </button>
+          );
+        })}
       </div>
 
+      {/* Content Feed */}
       {loading ? (
         <div className="grid sm:grid-cols-2 gap-5">
           {[1, 2, 3, 4].map((i) => (
@@ -68,7 +88,11 @@ export default function Home() {
         <EmptyState
           icon={Rss}
           title="Nothing here yet"
-          description={search ? "Try a different search term or clear filters." : "Be the first to post in this category."}
+          description={
+            search
+              ? "Try a different search term or clear filters."
+              : "Be the first to post in this category."
+          }
         />
       ) : (
         <div className="space-y-8">
@@ -77,7 +101,7 @@ export default function Home() {
               <p className="text-xs font-medium text-slate-400">Recommended for you</p>
               <div className="grid sm:grid-cols-2 gap-5">
                 {recommended.map((item) => (
-                  <ContentCard key={item.id} item={item} />
+                  <ContentCard key={item.id ?? item.ContentID} item={item} />
                 ))}
               </div>
             </section>
@@ -85,7 +109,7 @@ export default function Home() {
           <section className="space-y-3">
             <div className="grid sm:grid-cols-2 gap-5">
               {feedItems.map((item) => (
-                <ContentCard key={item.id} item={item} />
+                <ContentCard key={item.id ?? item.ContentID} item={item} />
               ))}
             </div>
           </section>
