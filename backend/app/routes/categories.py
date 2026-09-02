@@ -11,9 +11,9 @@ categories_bp = Blueprint("categories", __name__)
 def list_categories():
     categories = Category.query.all()
     return jsonify([{
-        "id": categories.CategoryID,
-        "name": categories.Name,
-        "description": categories.Description
+        "id": category.CategoryID,
+        "name": category.Name,
+        "description": category.Description
     }for category in categories]), 200
 
 #----------------- CREATE CATEGORY ----------------

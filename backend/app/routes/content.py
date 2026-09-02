@@ -59,14 +59,13 @@ def list_content():
 
         "category":[
             {
-                "id": category.CategoryID,
-                "name": category.Name
-            }
+                "id": cat.CategoryID,
+                "name": cat.Name
+            } for cat in content.categories
         ],
         "created_at": (
-            content.created_at.isoformat()
-         if created_at else None
-         )
+            content.CreatedAt.isoformat() if content.CreatedAt else None 
+        )
     }for content in items]), 200
 
 #----------------------------------- GET A SPECIFIC CONTENT--------------
@@ -90,8 +89,8 @@ def get_single_content(content_id):
             for category in item.categories
         ],
         "created_at": (
-            item.created_at.isoformat()
-         if item.created_at else None
+            item.CreatedAt.isoformat()
+         if item.CreatedAt else None
         )
     }), 200
 
@@ -146,7 +145,7 @@ def create_content():
     }),201 
 
 #------------------------------ MODIFICATION------
-@content_bp.put("<int:content_id>")
+@content_bp.put("/<int:content_id>")
 @jwt_required()
 @role_required("tech_writer")
 def edit_content(content_id):
@@ -175,7 +174,7 @@ def edit_content(content_id):
         )
         if not category:
             return jsonify({
-                "Error": "Category is not found"
+                "error": "Category is not found"
             }) ,404
         item.categories=[category]   
 
@@ -201,13 +200,13 @@ def delete_content(content_id):
     return jsonify({"message": "Content deleted"}), 200
 
 #------------------------APPROVE CONTENT -----------------
-@content_bp.patch("<int:content_id>/approve")
+@content_bp.patch("/<int:content_id>/approve")
 @jwt_required()
 @role_required("admin", "tech_writer")
 def approve_content(content_id):
     item= Content.query.get_or_404(content_id)
 
-    item.status="Published"
+    item.Status="Published"
     item.IsApproved= True
 
     db.session.commit()
