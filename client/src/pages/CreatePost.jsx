@@ -37,7 +37,7 @@ export default function CreatePost() {
           if (sessionData && sessionData.access_token) {
             return sessionData.access_token;
           }
-        } catch (err) {
+        } catch {
           // Ignore JSON parse errors
         }
       }
