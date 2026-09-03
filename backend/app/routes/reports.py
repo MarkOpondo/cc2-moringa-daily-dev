@@ -1,67 +1,98 @@
-from flask import Blueprint, request,jsonify
-from flask_jwt_extended import jwt_required,get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from app.extensions import db
-from app.models import ContentReport
+from app.models import Content, ContentReport
 from app.utils import role_required
 
-reports_bp= Blueprint("reports", __name__)
+reports_bp = Blueprint("reports", __name__)
 
-@reports_bp.post("/content/<int:content_id>/report")
+
+def safe_get_user_id():
+    """Extract integer user ID safely from JWT identity."""
+    identity = get_jwt_identity()
+    if isinstance(identity, dict):
+        return int(identity.get("id"))
+    return int(identity)
+
+
+# --------------------- USER ENDPOINTS --------------------- #
+
+# Endpoint: POST /api/reports/content/<int:content_id>
+@reports_bp.post("/content/<int:content_id>")
 @jwt_required()
 def report_content(content_id):
-    data = request.get_json()
-    if not data:
-        return jsonify({
-            "error": "Request body is required."
-        }),400
-    if not reason:
-        return jsonify({
-            "error": "Reason is required"
-        }),400  
+    content = db.session.get(Content, content_id)
+    if not content:
+        return jsonify({"error": "Content not found."}), 404
+
+    data = request.get_json(silent=True) or {}
+    reason = data.get("reason")
+
+    if not reason or not str(reason).strip():
+        return jsonify({"error": "Reason is required."}), 400
+
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity."}), 400
 
     report = ContentReport(
-        ReportedBy= int(get_jwt_identity()),
+        ReportedBy=user_id,
         ContentID=content_id,
-        Reason= data.get("reason", "No reason provided"),
-        Status="Pending"
+        Reason=reason.strip(),
+        Status="Pending",
     )
 
     db.session.add(report)
     db.session.commit()
-    return jsonify({"message": "Report submitted. "}),201
-#------------------------- LIST REPORTS-------------------
-@reports_bp.get("/reports")
+
+    return jsonify({"message": "Report submitted successfully."}), 201
+
+
+# --------------------- ADMIN ENDPOINTS --------------------- #
+
+# Endpoint: GET /api/reports (with optional ?status=Pending)
+@reports_bp.get("")
 @jwt_required()
-@role_required("admin")
+@role_required("Admin")
 def list_reports():
-    # default show unresolved. ?resolved=true for all
-    status= request.args.get("status")
+    status = request.args.get("status")
 
     query = ContentReport.query
-    
     if status:
-        query=query.filter_by(Status=status)
-    reports =query.order_by(
-        ContentReport.CreatedAt.desc()
-    ).all()    
-    
-    return jsonify([{
-        "id": report.ReportID,
-        "content_id": report.ContentID,
-        "user_id": report.ReportedBy,
-        "reason": report.Reason,
-        "status": report.Status
-    }for report in reports]),200
+        query = query.filter_by(Status=status)
 
-#------------------------------------ Resolve reports-------
-@reports_bp.patch("/reports/<int:report_id>")
+    reports = query.order_by(ContentReport.CreatedAt.desc()).all()
+
+    return (
+        jsonify([
+            {
+                "id": report.ReportID,
+                "content_id": report.ContentID,
+                "user_id": report.ReportedBy,
+                "reason": report.Reason,
+                "status": report.Status,
+                "created_at": (
+                    report.CreatedAt.isoformat() if report.CreatedAt else None
+                ),
+            }
+            for report in reports
+        ]),
+        200,
+    )
+
+
+# Endpoint: PATCH /api/reports/<int:report_id>
+@reports_bp.patch("/<int:report_id>")
 @jwt_required()
-@role_required("admin")
+@role_required("Admin")
 def resolve_report(report_id):
+    report = db.session.get(ContentReport, report_id)
+    if not report:
+        return jsonify({"error": "Report not found."}), 404
 
-    report = ContentReport.query.get_or_404(report_id)
-    report.Status="Resolved"
-    
+    report.Status = "Resolved"
     db.session.commit()
-    return jsonify({"message": "Report resolved."}),200
 
+    return jsonify({"message": "Report resolved successfully."}), 200

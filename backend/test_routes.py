@@ -1,126 +1,134 @@
 import pytest
-from app import app, db
-from app.models import Category, Content
+from app.models import Content, User, db
 
 
+# -------------------------------------------------------------------
+# FIXTURE: Setup Authenticated Test Context
+# -------------------------------------------------------------------
 @pytest.fixture
-def client():
-    # Configure app for testing
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+def auth_context(client, app):
+    """Creates a primary user and authenticates to get a bearer token."""
+    with app.app_context():
+        user = User(
+            email="writer@moringadaily.dev",
+            username="writer",
+            Role="user",
+        )
+        user.set_password("SecurePassword123!")
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.UserID
 
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
+    login_res = client.post(
+        "/api/auth/login",
+        json={"email": "writer@moringadaily.dev", "password": "SecurePassword123!"},
+    )
+    token = login_res.get_json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
-            # Seed mock data for testing
-            cat = Category(name='Technology')
-            db.session.add(cat)
-            db.session.commit()
-
-            post = Content(
-                title='Flask Testing Guide',
-                summary='Learning how to test APIs using pytest',
-                category_id=cat.id,
-            )
-            db.session.add(post)
-            db.session.commit()
-
-        yield client
-
-        # Teardown database session and tables
-        with app.app_context():
-            db.session.remove()
-            db.drop_all()
+    return headers, user_id
 
 
-# --- CATEGORY TESTS ---
+# ===================================================================
+# HAPPY PATH TEST CASES
+# ===================================================================
 
+def test_create_content_happy_path(client, auth_context, app):
+    """HAPPY CASE: Standard valid content creation request succeeds with 201 Created."""
+    headers, user_id = auth_context
 
-def test_get_categories(client):
-    """Test retrieving all categories."""
-    response = client.get('/api/categories')
-    assert response.status_code == 200
-    data = response.get_json()
-    assert len(data) == 1
-    category_names = [cat['name'] for cat in data]
-    assert 'Technology' in category_names
+    payload = {
+        "title": "Clean Backend Design Principles",
+        "description": "Comprehensive guide to building REST APIs in Flask.",
+        "content_type": "Article",
+        "status": "Published"
+    }
 
+    response = client.post("/api/content", json=payload, headers=headers)
 
-def test_create_category(client):
-    """Test creating a new category."""
-    payload = {'name': 'Science'}
-    response = client.post('/api/categories', json=payload)
     assert response.status_code == 201
     data = response.get_json()
-    assert data['name'] == 'Science'
-    assert 'id' in data
+    assert data["message"] == "Content submitted successfully!"
+    assert data["status"] == "Published"
+    assert "content_id" in data
+
+    # Verify database persistence
+    with app.app_context():
+        item = db.session.get(Content, data["content_id"])
+        assert item is not None
+        assert item.Title == "Clean Backend Design Principles"
+        assert item.UserID == user_id
 
 
-def test_create_category_missing_data(client):
-    """Test category creation failure on invalid/missing payload."""
-    response = client.post('/api/categories', json={})
-    assert response.status_code == 400
+# ===================================================================
+# EDGE CASE TEST CASES
+# ===================================================================
 
+def test_status_sanitization_edge_case(client, auth_context, app):
+    """EDGE CASE: Malformed/lowercase status input ('draft') is sanitized to title-case ('Draft')
 
-# --- CONTENT TESTS ---
+    preventing a raw Database CheckConstraint violation.
+    """
+    headers, _ = auth_context
 
-
-def test_get_content(client):
-    """Test retrieving all content posts."""
-    response = client.get('/api/content')
-    assert response.status_code == 200
-    data = response.get_json()
-    assert len(data) == 1
-    assert data[0]['title'] == 'Flask Testing Guide'
-
-
-def test_get_single_content(client):
-    """Test retrieving a single content item by ID."""
-    response = client.get('/api/content/1')
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data['title'] == 'Flask Testing Guide'
-    assert data['summary'] == 'Learning how to test APIs using pytest'
-
-
-def test_get_single_content_not_found(client):
-    """Test 404 response for non-existent content ID."""
-    response = client.get('/api/content/999')
-    assert response.status_code == 404
-
-
-def test_create_content(client):
-    """Test creating a new content post."""
+    # Lowercase 'draft' would trigger DB CheckConstraint if not sanitized by route logic
     payload = {
-        'title': 'Pytest Fixtures Overview',
-        'summary': 'Understanding fixture scopes and test isolation',
-        'category_id': 1,
+        "title": "Edge Case Status Test",
+        "description": "Testing status fallback and capitalization.",
+        "content_type": "Article",
+        "status": "draft"  
     }
-    response = client.post('/api/content', json=payload)
+
+    response = client.post("/api/content", json=payload, headers=headers)
+
     assert response.status_code == 201
     data = response.get_json()
-    assert data['title'] == 'Pytest Fixtures Overview'
-    assert data['category_id'] == 1
+    assert data["status"] == "Draft"  # Must be converted to strict 'Draft'
+
+    with app.app_context():
+        item = db.session.get(Content, data["content_id"])
+        assert item.Status == "Draft"
 
 
-def test_update_content(client):
-    """Test updating an existing content post."""
-    payload = {
-        'title': 'Updated Flask Testing Guide',
-        'summary': 'Updated description for testing endpoints',
-    }
-    response = client.put('/api/content/1', json=payload)
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data['title'] == 'Updated Flask Testing Guide'
+def test_cross_user_edit_unauthorized_edge_case(client, auth_context, app):
+    """EDGE CASE: Non-owner/non-admin user attempts to modify another user's post.
 
+    Should return 403 Forbidden without mutating the database state.
+    """
+    headers, _ = auth_context
 
-def test_delete_content(client):
-    """Test deleting a content post."""
-    response = client.delete('/api/content/1')
-    assert response.status_code == 200
+    # Create a secondary victim user and their content item directly
+    with app.app_context():
+        victim = User(
+            email="victim@moringadaily.dev",
+            username="victim",
+            Role="user"
+        )
+        db.session.add(victim)
+        db.session.commit()
 
-    # Confirm item no longer exists
-    get_response = client.get('/api/content/1')
-    assert get_response.status_code == 404
+        victim_post = Content(
+            Title="Victim Original Title",
+            Description="Original text",
+            ContentType="Article",
+            Status="Published",
+            UserID=victim.UserID
+        )
+        db.session.add(victim_post)
+        db.session.commit()
+        victim_post_id = victim_post.ContentID
+
+    # Attempt to overwrite victim's content using primary user's auth headers
+    response = client.put(
+        f"/api/content/{victim_post_id}",
+        json={"title": "Hacked Title Hijack"},
+        headers=headers
+    )
+
+    assert response.status_code == 403
+    assert "Forbidden" in response.get_json()["error"]
+
+    # Verify victim content remains untouched in database
+    with app.app_context():
+        original_item = db.session.get(Content, victim_post_id)
+        assert original_item.Title == "Victim Original Title"

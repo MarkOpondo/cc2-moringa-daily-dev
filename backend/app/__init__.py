@@ -68,10 +68,6 @@ def create_app(config_class="development"):
         reports_bp,
         url_prefix="/api"
     )
-    app.register_blueprint(
-        ai_bp,
-        url_prefix="/api/ai"
-    )
 
     @app.get("/")
     def index():
