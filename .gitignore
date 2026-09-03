@@ -79,3 +79,4 @@ yarn-error.log*
 # =========================
 *.tmp
 *.temp../venv/
+backend/app.db

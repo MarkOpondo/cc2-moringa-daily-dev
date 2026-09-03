@@ -1,5 +1,10 @@
-from flask import Blueprint, request, jsonify
+
+import os
+
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from werkzeug.utils import secure_filename
+
 from app.extensions import db
 from app.models import Content, User, Category, Subscription, Notification
 from app.utils import role_required
@@ -19,28 +24,30 @@ def safe_get_user_id():
 
 def _notify_subscribers(content_item):
     """Send notifications to users subscribed to this content's categories."""
+
     notifications = []
-    """Send notifications to users subscribed to this content's categories."""
-    notifications = []
+
     for category in content_item.categories:
         subscriptions = Subscription.query.filter_by(
             CategoryID=category.CategoryID
         ).all()
+
         for sub in subscriptions:
             if sub.UserID != content_item.UserID:
                 notifications.append(
                     Notification(
                         UserID=sub.UserID,
                         ContentID=content_item.ContentID,
-                        Message=f"New content in your feed: '{content_item.Title}'",
+                        Message=(
+                            f"New content in your feed: "
+                            f"'{content_item.Title}'"
+                        ),
                     )
                 )
-
 
     if notifications:
         db.session.add_all(notifications)
         db.session.commit()
-
 
 # -------------------------------------------------------------------
 # 1. LIST CONTENT (WITH PAGINATION)
@@ -107,30 +114,31 @@ def list_content():
             content_img = f"http://127.0.0.1:5001{content_img}"
 
         items_data.append({
-            "id": content.ContentID,
-            "content_id": content.ContentID,
-            "title": content.Title,
-            "description": content.Description,
-            "content_type": content.ContentType,
-            "content_image": content_img,   # Main post thumbnail/cover image
-            "content_image": content_img,
-            "content_url": content.ContentURL,
-            "status": content.Status,
-            "is_approved": getattr(content, "IsApproved", False),
-            "author_id": content.UserID,
-            "author": {
-                "username": author_username,
-                "profile_image": profile_img
-            },
-            "views_count": getattr(content, "ViewsCount", 0),
-            "likes_count": getattr(content, "LikesCount", 0),
-            "categories": [
-                {"id": cat.CategoryID, "name": cat.Name}
-                for cat in content.categories
-            ],
-            "created_at": content.CreatedAt.isoformat() if content.CreatedAt else None,
-        })
-
+    "id": content.ContentID,
+    "content_id": content.ContentID,
+    "title": content.Title,
+    "description": content.Description,
+    "type": content.ContentType,
+    "content_type": content.ContentType,
+    "url": content.ContentURL,
+    "content_url": content.ContentURL,
+    "thumbnail": content.ThumbnailURL,
+    "content_image": content_img,
+    "status": content.Status,
+    "is_approved": getattr(content, "IsApproved", False),
+    "author_id": content.UserID,
+    "author": {
+        "username": author_username,
+        "profile_image": profile_img
+    },
+    "views_count": getattr(content, "ViewsCount", 0),
+    "likes_count": getattr(content, "LikesCount", 0),
+    "categories": [
+        {"id": cat.CategoryID, "name": cat.Name}
+        for cat in content.categories
+    ],
+    "created_at": content.CreatedAt.isoformat() if content.CreatedAt else None,
+})
     return jsonify({
         "items": items_data,
         "pagination": {
@@ -158,7 +166,7 @@ def get_single_content(content_id):
         if getattr(item.author, "profile", None):
             author_data["profile_image"] = getattr(item.author.profile, "ProfileImage", None)
 
-    return jsonify({
+        return jsonify({
         "id": item.ContentID,
         "content_id": item.ContentID,
         "title": item.Title,
@@ -167,6 +175,7 @@ def get_single_content(content_id):
         "content_type": item.ContentType,
         "url": item.ContentURL,
         "content_url": item.ContentURL,
+        "thumbnail": item.ThumbnailURL,
         "status": item.Status,
         "is_approved": getattr(item, "IsApproved", False),
         "author_id": item.UserID,
@@ -178,7 +187,6 @@ def get_single_content(content_id):
         "created_at": item.CreatedAt.isoformat() if item.CreatedAt else None,
     }), 200
 
-
 # -------------------------------------------------------------------
 # 3. CREATE CONTENT
 # -------------------------------------------------------------------
@@ -187,66 +195,157 @@ def get_single_content(content_id):
 def create_content():
     try:
         user_id = safe_get_user_id()
+
         if not user_id:
             return jsonify({"error": "Unauthorized user"}), 401
 
-        # Handle JSON or Multipart Form-Data
+        user = db.session.get(User, user_id)
+
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Handle JSON or multipart/form-data
         if request.is_json:
-            data = request.get_json() or {}
+            data = request.get_json(silent=True) or {}
             file = None
         else:
             data = request.form.to_dict()
-            file = request.files.get("file") or request.files.get("content_url")
+            file = (
+                request.files.get("file")
+                or request.files.get("content_url")
+            )
 
         title = data.get("title") or data.get("Title")
-        description = data.get("description") or data.get("Description") or data.get("body") or ""
-        content_type = data.get("content_type") or data.get("type") or "Article"
-        category_id = data.get("category_id") or data.get("categoryId")
+
+        description = (
+            data.get("description")
+            or data.get("Description")
+            or data.get("body")
+            or ""
+        )
+
+        content_type = (
+            data.get("content_type")
+            or data.get("type")
+            or "Article"
+        )
+
+        content_type = str(content_type).capitalize()
+
+        allowed_types = ["Article", "Video", "Audio", "Image"]
+
+        if content_type not in allowed_types:
+            return jsonify({
+                "error": (
+                    "Invalid Content type. Must be one of: "
+                    + ", ".join(allowed_types)
+                )
+            }), 400
+
+        category_id = (
+            data.get("category_id")
+            or data.get("categoryId")
+            or data.get("category")
+        )
 
         if not title:
             return jsonify({"error": "Title is required"}), 400
 
-        # File Upload Handling
-        file_url = data.get("content_url") or ""
+        # -----------------------------------------------------------
+        # File / URL handling
+        # -----------------------------------------------------------
+
+        file_url = data.get("content_url") or data.get("url") or ""
+
         if file:
             filename = secure_filename(file.filename)
-            upload_dir = current_app.config.get("UPLOAD_FOLDER", "static/uploads")
+
+            if not filename:
+                return jsonify({"error": "Invalid file"}), 400
+
+            upload_dir = current_app.config.get(
+                "UPLOAD_FOLDER",
+                "static/uploads"
+            )
+
             os.makedirs(upload_dir, exist_ok=True)
+
             save_path = os.path.join(upload_dir, filename)
             file.save(save_path)
+
             file_url = f"/static/uploads/{filename}"
 
-        # Status Check Constraint Compliance
-        req_status = str(data.get("status", "")).capitalize()
-        status = req_status if req_status in ["Draft", "Published", "Archived"] else "Published"
+        # -----------------------------------------------------------
+        # Status / approval logic
+        # -----------------------------------------------------------
+
+        role = getattr(user, "Role", "user")
+
+        if role.lower() in ["admin", "tech_writer"]:
+            status = "Published"
+            is_approved = True
+        else:
+            status = "Pending"
+            is_approved = False
+
+        # -----------------------------------------------------------
+        # Create content
+        # -----------------------------------------------------------
 
         new_content = Content(
+            UserID=user_id,
             Title=title,
             Description=description,
             ContentType=content_type,
             ContentURL=file_url,
             Status=status,
-            UserID=user_id
+            IsApproved=is_approved
         )
 
+        # -----------------------------------------------------------
+        # Category association
+        # -----------------------------------------------------------
+
         if category_id:
-            category = db.session.get(Category, int(category_id))
-            if category:
+            try:
+                category = db.session.get(
+                    Category,
+                    int(category_id)
+                )
+
+                if not category:
+                    return jsonify({
+                        "error": "Category not found"
+                    }), 404
+
                 new_content.categories.append(category)
+
+            except (ValueError, TypeError):
+                return jsonify({
+                    "error": "Invalid Category ID format"
+                }), 400
 
         db.session.add(new_content)
         db.session.commit()
 
         return jsonify({
             "message": "Content submitted successfully!",
-            "content_id": getattr(new_content, "ContentID", getattr(new_content, "id", None)),
-            "status": new_content.Status
+            "content_id": new_content.ContentID,
+            "status": new_content.Status,
+            "is_approved": getattr(
+                new_content,
+                "IsApproved",
+                False
+            )
         }), 201
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": "Failed to submit content", "details": str(e)}), 500
 
+        return jsonify({
+            "error": "Failed to submit content",
+            "details": str(e)
+        }), 500
 
 # -------------------------------------------------------------------
 # EDIT CONTENT (PUT/PATCH)
@@ -393,7 +492,7 @@ def flag_content(content_id):
         if hasattr(item, "IsApproved"):
             item.IsApproved = False
 
-        # Set status to Archived to keep compliance with Status CheckConstraints 
+        # Set status to Archived to keep compliance with Status CheckConstraints
         # ('Draft', 'Published', 'Archived')
         item.Status = "Archived"
 
