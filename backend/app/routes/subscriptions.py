@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
 from app.models import Subscription, Category
@@ -8,7 +8,7 @@ subscriptions_bp = Blueprint("subscriptions", __name__)
 #------------------ SUBSCRIBE TO CATEGORY ------------------
 @subscriptions_bp.post("")
 @jwt_required()
-def subscribe_to_category(category_id):
+def subscribe_to_category():
     user_id = int(get_jwt_identity())
 
     data=request.get_json()
