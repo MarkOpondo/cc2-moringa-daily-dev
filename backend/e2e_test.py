@@ -76,6 +76,19 @@ r = client.post("/api/auth/login", json={"username": "ann", "password": "Passw0r
 check("login 200", r.status_code == 200, r.get_json())
 check("login returns is_admin flag", "is_admin" in r.get_json()["user"], r.get_json())
 
+print("\n== 1b. SEPARATE ADMIN LOGIN (public form rejects admins) ==")
+r = client.post("/api/auth/login", json={"username": "adminboss", "password": "Passw0rd!"})
+check("public login rejects admin (403)", r.status_code == 403, r.get_json())
+check("rejection message points to admin login",
+      "admin" in str(r.get_json().get("error", "")).lower(), r.get_json())
+r = client.post("/api/auth/admin/login", json={"username": "adminboss", "password": "Passw0rd!"})
+check("admin login endpoint works (200)", r.status_code == 200, r.get_json())
+check("admin login returns admin role", r.get_json()["user"]["role"] == "Admin", r.get_json())
+r = client.post("/api/auth/admin/login", json={"username": "ann", "password": "Passw0rd!"})
+check("admin login rejects non-admin (403)", r.status_code == 403, r.get_json())
+r = client.post("/api/auth/login", json={"username": "writer", "password": "Passw0rd!"})
+check("tech_writer can still use public login", r.status_code == 200, r.get_json())
+
 print("\n== 2. PROFILE: save skills + github, then reload ==")
 r = client.put("/api/profiles/me", headers=as_user(ANN_TOKEN), json={
     "bio": "Moringa student", "skills": "React, Python, Tailwind",

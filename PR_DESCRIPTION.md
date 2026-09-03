@@ -7,7 +7,7 @@ Everything below is ready to copy-paste into GitHub.
 ## 1. PR TITLE
 
 ```
-fix: backend startup crash, profile persistence, post submission, reactions, notifications, admin flow + Instagram-style posting & one-command setup
+fix: backend startup crash, profile persistence, post submission, reactions, notifications, admin flow + Instagram-style posting, Render deployment & separate admin login
 ```
 
 ---
@@ -20,12 +20,13 @@ fix: backend startup crash, profile persistence, post submission, reactions, not
 This PR repairs the backend (which could not start on `main`), fixes every
 reported user-facing bug (profile fields disappearing on reload, post
 submission 500s, dead reactions button, empty notifications, broken admin
-dashboard, subscriptions CORS errors), adds Instagram-style post creation,
-admin sign-up, and a one-command dev setup (`bash dev.sh`) that also
-auto-repairs databases created from the old models.
+dashboard, subscriptions CORS errors), adds Instagram-style post creation and
+admin sign-up, **separates the admin login from the public login form**, and
+adds **one-click deployment to Render** (`render.yaml` + production config).
 
-Verified with **53 automated backend e2e checks** (`backend/e2e_test.py`)
-and **37 frontend tests** — all passing — plus a full live run of both servers.
+Verified with **59 automated backend e2e checks** (`backend/e2e_test.py`)
+and **37 frontend tests** — all passing — plus a live gunicorn/production-mode
+smoke test of the exact Render start command.
 
 ## What was broken
 
@@ -41,16 +42,28 @@ and **37 frontend tests** — all passing — plus a full live run of both serve
 - **Post submission failing (500)**: the `Content` status check-constraint didn't allow `Pending` (what new learner posts get); the create response had no `id` (frontend navigated to `/content/undefined`); uploads were saved to a folder Flask doesn't serve → media 404; `GET /api/content/<id>` returned `None` when content had no author
 - **Reactions not working**: `ContentDetail` called `react(id, user.id, type)` — the user id was sent *as the reaction type* (400 every click); no GET summary endpoint existed; the POST returned no counts
 - **Notifications dead**: `notifications.py` was a hardcoded `return []`; `_notify_subscribers()` in `content.py` was defined but **never called**; response keys didn't match what the page reads (`isRead` / `contentId` / `createdAt`)
-- **Admin broken**: `role_required` read a role that isn't in the JWT → passed everyone through; dashboard's `adminApi` called `api.get()` on a fetch wrapper (TypeError) with wrong URLs; "Rejected" status violated the DB constraint (500); `RoleRoute` compared roles case-sensitively so real admins were locked out of `/admin`; `GET /api/reports` was unroutable
+- **Admin broken**: `role_required` read a role that isn't in the JWT → passed everyone through; dashboard's `adminApi` called `api.get()` on a fetch wrapper (TypeError) with wrong URLs; "Rejected" status violated the DB constraint (500); `RoleRoute` compared roles case-sensitively so real admins were locked out of `/admin` (same bug in `NavDrawer`); `GET /api/reports` was unroutable
 - **Subscriptions CORS error**: blueprint registered under `/api` with empty routes → `GET/POST /api/subscriptions` 404 → the OPTIONS preflight failed, which the browser reports as a CORS error
-- **Misleading CORS errors on 500s**: unhandled exceptions in debug mode escalated to the Werkzeug debugger page, which carries **no CORS headers** — the browser showed "No 'Access-Control-Allow-Origin'" instead of the real error
+- **Misleading CORS errors on 500s**: unhandled exceptions in debug mode escalated to the Werkzeug debugger page, which carries **no CORS headers**
 - Wishlist remove sent the content id where the API expects the wishlist row id; search (`?q=`) was ignored by the content API
+
+### Security
+- **Admin accounts could sign in through the public login form** — dangerous. Now:
+  - the public `POST /api/auth/login` **rejects Admin accounts (403)** and tells them where to go
+  - a dedicated **`POST /api/auth/admin/login`** accepts *only* Admin accounts (non-admins get 403)
+  - new **`/admin/login`** page (separate dark "admin portal" UI, public route) → admins land on `/admin`
+  - the public login form shows a "Continue on the secure admin login" link when an admin tries it, and a discreet footer link
+  - admin **sign-up** (account-type picker) is unchanged — admins are still created via `/signup`
+  - `role_required` now enforces roles from the DB case-insensitively: admin endpoints return 403 for non-admins
 
 ## What's new
 
 - 📸 **Instagram-style composer** at `/create`: drag & drop image/video/audio with live preview, caption, auto-derived title, category chips, share confirmation ("live" vs "sent for review"); long-form editor (with AI helpers) moved to `/create-article`; optimistic ❤️ button on feed cards
-- 👑 **Admin sign-up**: account-type picker (Learner / Tech Writer / Admin) on the sign-up page; roles normalised; admins land on `/admin`
-- 🥬 **`bash dev.sh`** — one command: installs deps, prepares/migrates/seeds the DB (default admin `admin` / `Admin123!`), starts backend (5001) + frontend (5173)
+- 👑 **Admin sign-up + separate admin sign-in**: account-type picker (Learner / Tech Writer / Admin) on `/signup`; dedicated admin portal login at `/admin/login`; admins land on `/admin`
+- 🚀 **Render deployment** (`render.yaml` blueprint): free PostgreSQL + Flask/gunicorn web service in one click — `DATABASE_URL` wired automatically, `SECRET_KEY`/`JWT_SECRET_KEY` auto-generated, health check on `/`, idempotent DB bootstrap/seed on every deploy; optional persistent-disk and static-site frontend blocks documented inline; `DEPLOYMENT.md` has the full guide
+  - production hardening: `ProductionConfig` (`DEBUG=False`), `FLASK_ENV` config selection, `postgres://` → `postgresql://` URL normalisation, empty-DB bootstrap at startup, gunicorn added to requirements
+  - client no longer hardcodes `http://localhost:5001` — everything reads `VITE_API_BASE_URL` (default localhost for dev), so a deployed frontend just needs that one build-time env var
+- 🥬 **`bash dev.sh`** — one command: installs deps, prepares/migrates/seeds the DB (default admin `admin` / `Admin123!` — **signs in via `/admin/login`**), starts backend (5001) + frontend (5173)
 - 🩺 **`app/schema_doctor.py`** — idempotent schema repair for databases created from old models (adds missing columns, allows `Pending` status, preserves data); runs automatically on dev-server boot and via `backend/setup_db.py`
 - 🔔 Subscriber notifications fire when content is published (immediately for admin/tech_writer, or when an admin approves a pending post)
 - Global JSON error handler keeps CORS headers on every error and returns an actionable "schema is out of date — run bash dev.sh" hint when drift is detected
@@ -64,37 +77,41 @@ and **37 frontend tests** — all passing — plus a full live run of both serve
 
 ```bash
 bash dev.sh                                  # runs the whole stack
-# login: admin / Admin123!  (or sign up a new Learner/Tech Writer/Admin)
+# learner login: sign up normally
+# admin login:  http://localhost:5173/admin/login  with admin / Admin123!
 
-cd backend && .venv/bin/python e2e_test.py   # 53 automated checks
+cd backend && .venv/bin/python e2e_test.py   # 59 automated checks
 cd ../client && npx jest                     # 37 frontend tests
 ```
 
 Manual smoke test:
-1. Sign up (pick **Admin**) → lands on `/admin`
-2. Profile → add skills + GitHub URL → save → **reload** → both still there
-3. `/create` → drag in a photo + caption → Share → post appears in the feed with the image served from `/static/uploads/...`
-4. Heart a post from the feed and from the detail page → count updates, click again to unlike
-5. As a learner, post something → it's "Pending"; as admin, approve it from `/admin` → the author gets a notification
-6. Notifications page → list loads, "mark all as read" works
+1. Sign up (pick **Admin**) → auto-logged-in and lands on `/admin`
+2. Log out → try the admin credentials on the **public** `/login` → rejected with a link to the admin login; sign in at `/admin/login` → lands on `/admin`
+3. Profile → add skills + GitHub URL → save → **reload** → both still there
+4. `/create` → drag in a photo + caption → Share → post appears in the feed with the image served from `/static/uploads/...`
+5. Heart a post from the feed and from the detail page → count updates, click again to unlike
+6. As a learner, post something → it's "Pending"; as admin, approve it from `/admin` → the author gets a notification
+7. Notifications page → list loads, "mark all as read" works
+8. Deploy: Render dashboard → New → Blueprint → Apply (see `DEPLOYMENT.md`)
 
 ## Notes for reviewers
 
 - All API changes are additive (extra fields / aliases like `id` + `content_id`, camelCase + snake_case) — existing consumers keep working
+- The only intentional breaking behaviour: **`/api/auth/login` now returns 403 for Admin accounts** (use `/api/auth/admin/login`) — enforced server-side, not just in the UI
 - `role_required` now actually enforces roles from the DB (case-insensitive): admin endpoints return 403 for non-admins (covered by e2e)
-- Frontend base URL still `http://localhost:5001` (overridable via `VITE_API_BASE_URL`)
+- Free Render plan caveats documented in `DEPLOYMENT.md` (service sleep, ephemeral uploads → optional `disk:` block, 30-day Postgres expiry)
 ```
 
 ---
 
 ## 3. COMMIT MESSAGE
 
-The branch has **4 commits** (see `git log main..fix/all-bugfixes`). If you merge
+The branch has **6 commits** (see `git log main..fix/all-bugfixes`). If you merge
 with **"Squash and merge"** (recommended), GitHub will ask for one commit
 message — use this:
 
 ```
-fix: repair backend startup, profile persistence, post submission, reactions, notifications, admin flow + Instagram-style posting & one-command setup
+fix: repair backend startup, profile persistence, post submission, reactions, notifications, admin flow + Instagram-style posting, Render deployment & separate admin login
 
 Backend could not start on main: phantom auth/users imports, unregistered
 auth/admin blueprints, wrong-case Routes/ folder, and `from app import db`
@@ -109,18 +126,29 @@ ImportErrors. Beyond startup:
   counts and toggles off on repeat; Instagram-style heart on feed cards
 - Notifications: real endpoints (was hardcoded []), _notify_subscribers
   fires on publish/approval, camelCase keys
-- Admin: blueprint registered, role checks enforced case-insensitively,
-  Rejected mapped to Archived (constraint-safe), RejectionReason column +
-  migration, dashboard API rewritten against real routes
+- Admin security: public /api/auth/login rejects Admin accounts (403);
+  new dedicated /api/auth/admin/login (admins only) + /admin/login portal
+  page; admin sign-up picker unchanged; role checks enforced
+  case-insensitively from the DB (RoleRoute + NavDrawer case bugs fixed)
+- Admin dashboard: blueprint registered, Rejected mapped to Archived
+  (constraint-safe), RejectionReason column + migration, dashboard API
+  rewritten against real routes
 - Subscriptions: registered at /api/subscriptions (was 404 -> CORS error)
 - Errors: global JSON handler keeps CORS headers on 500s; schema drift
   returns an actionable hint
-- DB: app/schema_doctor.py repairs old local databases idempotently and
-  auto-runs on dev-server boot; dev.sh one-command stack; setup_db.py
+- DB: app/schema_doctor.py repairs old local databases idempotently,
+  bootstraps empty ones at startup, auto-runs on dev-server boot;
+  dev.sh one-command stack; setup_db.py
+- Deployment: render.yaml blueprint (free Postgres + gunicorn web service,
+  auto-generated secrets, health check, idempotent deploy bootstrap);
+  ProductionConfig with postgres:// URL normalisation; gunicorn added;
+  client fetches moved to VITE_API_BASE_URL (no hardcoded localhost);
+  DEPLOYMENT.md guide
 - Frontend: account-type picker on signup (Learner / Tech Writer / Admin),
   case-insensitive RoleRoute, wishlist remove uses the row id
 
-Verified: 53 backend e2e checks + 37 frontend tests, all passing.
+Verified: 59 backend e2e checks + 37 frontend tests, all passing, plus a
+gunicorn production-mode smoke test of the exact Render start command.
 ```
 
 ---
@@ -137,6 +165,9 @@ git checkout main && git pull origin main
 git checkout -b fix/all-bugfixes
 git am --3way ~/Downloads/fix-all.patch
 ```
+
+(If you already created `fix/all-bugfixes` from an older patch, reset it first:
+`git checkout main && git branch -D fix/all-bugfixes`.)
 
 ### Step 2 — push the branch
 
@@ -159,12 +190,22 @@ Paste section **2** as the description and create the PR.
 
 Click **"Squash and merge"** and paste section **3** as the commit message.
 
-### Step 5 — everyone else pulls the fix
+### Step 5 — deploy the merged main to Render
+
+1. Render dashboard → **New → Blueprint** → pick the repo → **Apply**
+   (the blueprint lives in `render.yaml` at the repo root).
+2. First boot creates the DB, seeds categories and the default admin
+   (`admin` / `Admin123!`) — **sign in at `https://<your-backend>.onrender.com`'s
+   frontend via `/admin/login`** and change that password immediately.
+3. Optional: uncomment the `moringa-client` static-site block in `render.yaml`
+   (or use Vercel/Netlify) with `VITE_API_BASE_URL` set to the backend URL.
+
+### Step 6 — everyone else pulls the fix
 
 ```bash
 git checkout main && git pull origin main && bash dev.sh
 ```
 
 `bash dev.sh` repairs old local databases automatically on first run —
-nobody needs to delete their `app.db` (delete it only if you want a
-completely fresh seeded database).
+nobody needs to delete their `app.db` (delete it only for a completely fresh
+seeded database).

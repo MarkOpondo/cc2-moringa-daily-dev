@@ -109,15 +109,34 @@ def register():
     )
 
 
-@auth_profile_bp.post("/login")
-@auth_profile_bp.post("/auth/login")
-def login():
-    data = request.get_json(silent=True) or {}
-    identifier = data.get("email") or data.get("username")
-    password = data.get("password")
+def _authenticate_and_respond(user, message="Login successful"):
+    """Shared login response builder (token + user payload)."""
+    access_token = create_access_token(identity=str(user.UserID))
+    role = getattr(user, "Role", "user")
+    is_admin = getattr(user, "is_admin", False) or (str(role).lower() == "admin")
 
+    return (
+        jsonify({
+            "token": access_token,
+            "access_token": access_token,
+            "message": message,
+            "user": {
+                "id": user.UserID,
+                "user_id": user.UserID,
+                "username": user.Username,
+                "email": user.Email,
+                "role": role,
+                "is_admin": is_admin,
+            },
+        }),
+        200,
+    )
+
+
+def _find_and_verify_user(identifier, password):
+    """Returns (user, error_response). Only one of them is set."""
     if not identifier or not password:
-        return jsonify({"error": "Email/username and password are required"}), 400
+        return None, (jsonify({"error": "Email/username and password are required"}), 400)
 
     user = User.query.filter(
         (User.Email == identifier) | (User.Username == identifier)
@@ -131,31 +150,60 @@ def login():
             is_authenticated = user.authenticate(password)
 
     if not user or not is_authenticated:
-        return jsonify({"error": "Invalid email/username or password"}), 401
+        return None, (jsonify({"error": "Invalid email/username or password"}), 401)
 
     if hasattr(user, "IsActive") and not user.IsActive:
-        return jsonify({"error": "Account is inactive"}), 403
+        return None, (jsonify({"error": "Account is inactive"}), 403)
 
-    access_token = create_access_token(identity=str(user.UserID))
-    role = getattr(user, "Role", "user")
-    is_admin = getattr(user, "is_admin", False) or (role.lower() == "admin")
+    return user, None
 
-    return (
-        jsonify({
-            "token": access_token,
-            "access_token": access_token,
-            "message": "Login successful",
-            "user": {
-                "id": user.UserID,
-                "user_id": user.UserID,
-                "username": user.Username,
-                "email": user.Email,
-                "role": role,
-                "is_admin": is_admin,
-            },
-        }),
-        200,
-    )
+
+@auth_profile_bp.post("/login")
+@auth_profile_bp.post("/auth/login")
+def login():
+    data = request.get_json(silent=True) or {}
+    identifier = data.get("email") or data.get("username")
+    password = data.get("password")
+
+    user, error = _find_and_verify_user(identifier, password)
+    if error:
+        return error
+
+    # SECURITY: admin accounts must NOT authenticate through the public
+    # login form — they have a dedicated admin login (/admin/login).
+    if str(getattr(user, "Role", "user") or "user").lower() == "admin":
+        return (
+            jsonify({
+                "error": (
+                    "Admin accounts cannot sign in here. "
+                    "Use the admin login page (/admin/login) instead."
+                )
+            }),
+            403,
+        )
+
+    return _authenticate_and_respond(user)
+
+
+@auth_profile_bp.post("/admin/login")
+@auth_profile_bp.post("/auth/admin/login")
+def admin_login():
+    """Dedicated admin sign-in. Only Admin-role accounts are accepted."""
+    data = request.get_json(silent=True) or {}
+    identifier = data.get("email") or data.get("username")
+    password = data.get("password")
+
+    user, error = _find_and_verify_user(identifier, password)
+    if error:
+        return error
+
+    if str(getattr(user, "Role", "user") or "user").lower() != "admin":
+        return (
+            jsonify({"error": "This account is not an admin account."}),
+            403,
+        )
+
+    return _authenticate_and_respond(user, message="Admin login successful")
 
 
 @auth_profile_bp.post("/logout")

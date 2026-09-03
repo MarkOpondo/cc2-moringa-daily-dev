@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AdminLoginPage from './pages/AdminLoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import AppShell from './layouts/AppShell';
@@ -43,6 +44,10 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
+
+        {/* Dedicated admin sign-in — public route, intentionally separate
+            from the public login form (admins are rejected there). */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
 
         {/* Everything below requires a valid login token */}
         <Route element={<ProtectedRoute />}>
