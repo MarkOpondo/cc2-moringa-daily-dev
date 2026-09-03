@@ -39,6 +39,8 @@ export default function CreateContent() {
     try {
       const created = await createContent({ ...form, authorId: user.id });
       navigate(`/content/${created.id}`);
+    } catch (err) {
+      setError(err.message || "Something went wrong while submitting. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -89,13 +91,21 @@ export default function CreateContent() {
           <select
             value={form.categoryId}
             onChange={(e) => update("categoryId", e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-line text-sm text-navy focus:outline-none focus:border-brand-500"
+            disabled={categories.length === 0}
+            className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-line text-sm text-navy focus:outline-none focus:border-brand-500 disabled:bg-surface disabled:text-muted"
           >
-            <option value="">Select a category…</option>
+            <option value="">
+              {categories.length === 0 ? "No categories available yet" : "Select a category…"}
+            </option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+          {categories.length === 0 && (
+            <p className="text-xs text-muted mt-1">
+              No categories exist yet — ask an admin to create one before you can publish.
+            </p>
+          )}
         </div>
 
         {form.type !== "article" && (
@@ -132,4 +142,5 @@ export default function CreateContent() {
     </div>
   );
 }
+
 
