@@ -41,19 +41,42 @@ export async function getContent(id) {
 export async function createContent({
   title,
   body,
+  description,
   type,
   mediaUrl,
+  url,
   categoryId,
+  authorId,
 }) {
+  const token = localStorage.getItem("token");
+
+  const parsedCategoryId = categoryId ? parseInt(categoryId, 10) : null;
+  const parsedAuthorId = authorId ? parseInt(authorId, 10) : null;
+
+  const payload = {
+    title: title,
+    description: body || description || "",
+    content_type: type || "article",
+    type: type || "article",
+    content_url: mediaUrl || url || "",
+    mediaUrl: mediaUrl || url || "",
+    category_id: parsedCategoryId,
+    author_id: parsedAuthorId,
+    // Schema field compatibility fallbacks
+    Title: title,
+    Description: body || description || "",
+    Type: type || "article",
+    CategoryID: parsedCategoryId,
+    AuthorID: parsedAuthorId,
+  };
+
   return apiRequest("/api/content", {
     method: "POST",
-    body: JSON.stringify({
-      title,
-      description: body,
-      type,
-      url: mediaUrl || "",
-      category_id: categoryId,
-    }),
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
   });
 }
 
