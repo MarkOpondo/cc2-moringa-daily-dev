@@ -224,7 +224,6 @@ check("status filter case-insensitive", r.status_code == 200, None)
 print("\n" + "=" * 60)
 print(f"RESULT: {len(PASSED)} passed, {len(FAILED)} failed")
 
-
 # Clean up test artifacts (throwaway DB + uploaded file)
 for path in (DB_PATH, os.path.join("instance", DB_PATH),
              os.path.join("app", "static", "uploads", "sunset.png")):
