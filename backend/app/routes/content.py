@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models import Content, User, Category, Subscription, Notification, ContentReaction
-from app.utils import role_required
+from app.utils import iso_utc, role_required
 
 content_bp = Blueprint("content", __name__)
 
@@ -74,7 +74,15 @@ def _absolute_media_url(url, request_host=None):
 
 def _serialize_content(content, current_user_id=None):
     """Common serializer so list & detail return the same shape."""
+    from flask import request
+
     author_username = content.author.Username if getattr(content, "author", None) else "Anonymous"
+
+    # Resolve the public backend host once: media URLs must be ABSOLUTE —
+    # the frontend runs on another origin (localhost:5173 / deployed host),
+    # so a relative /static/uploads/... path would 404 there and no
+    # image/video/audio would ever render.
+    host = request.host_url.rstrip("/") if request else "http://127.0.0.1:5001"
 
     profile_img = None
     if getattr(content, "author", None) and getattr(content.author, "profile", None):
@@ -82,10 +90,11 @@ def _serialize_content(content, current_user_id=None):
     if not profile_img:
         profile_img = f"{DEFAULT_AVATAR}{author_username}"
     else:
-        profile_img = _absolute_media_url(profile_img)
+        profile_img = _absolute_media_url(profile_img, host)
 
-    content_img = _absolute_media_url(content.ContentURL) or DEFAULT_COVER
-    thumbnail = _absolute_media_url(getattr(content, "ThumbnailURL", None))
+    content_img = _absolute_media_url(content.ContentURL, host) or DEFAULT_COVER
+    thumbnail = _absolute_media_url(getattr(content, "ThumbnailURL", None), host)
+    file_url = _absolute_media_url(content.ContentURL, host) or ""
 
     likes_count = (
         ContentReaction.query.filter_by(
@@ -111,6 +120,8 @@ def _serialize_content(content, current_user_id=None):
     ]
     category = categories[0] if categories else None
 
+    created_at = iso_utc(content.CreatedAt)
+
     return {
         "id": content.ContentID,
         "content_id": content.ContentID,
@@ -119,8 +130,10 @@ def _serialize_content(content, current_user_id=None):
         "summary": getattr(content, "Summary", None),
         "type": content.ContentType,
         "content_type": content.ContentType,
-        "url": content.ContentURL,
-        "content_url": content.ContentURL,
+        "url": file_url,
+        "content_url": file_url,
+        "media_url": file_url,
+        "mediaUrl": file_url,
         "thumbnail": thumbnail,
         "thumbnail_url": thumbnail,
         "content_image": content_img,
@@ -139,7 +152,9 @@ def _serialize_content(content, current_user_id=None):
         "comments_count": len(content.comments) if hasattr(content, "comments") else 0,
         "categories": categories,
         "category": category,
-        "created_at": content.CreatedAt.isoformat() if content.CreatedAt else None,
+        # camelCase + snake_case so any consumer style works
+        "created_at": created_at,
+        "createdAt": created_at,
     }
 
 
@@ -333,10 +348,19 @@ def create_content():
         # -----------------------------------------------------------
         # Status / approval logic
         # -----------------------------------------------------------
+        # Admins and tech writers publish immediately BY DESIGN — their posts
+        # are trusted. If a team wants EVERYONE (including admins) to go
+        # through review while testing, set MODERATE_ALL_POSTS=1 in the
+        # environment (e.g. in dev.sh or Render's dashboard) and even admin
+        # posts will land in Pending until an admin approves them.
 
         role = getattr(user, "Role", "user") or "user"
+        moderate_everything = (
+            os.environ.get("MODERATE_ALL_POSTS", "").strip().lower()
+            in ("1", "true", "yes")
+        )
 
-        if role.lower() in ["admin", "tech_writer"]:
+        if role.lower() in ["admin", "tech_writer"] and not moderate_everything:
             status = "Published"
             is_approved = True
         else:
@@ -400,7 +424,18 @@ def create_content():
                 new_content,
                 "IsApproved",
                 False
-            )
+            ),
+            # Tells the UI why the post skipped review, so the success
+            # screen can explain "published instantly" vs "awaiting review".
+            "published_immediately": status == "Published",
+            "publish_reason": (
+                "Your role ({}) publishes without review{}.".format(
+                    role,
+                    " — MODERATE_ALL_POSTS is on" if moderate_everything else "",
+                )
+                if status == "Published"
+                else "Posts are reviewed by an admin before they appear in the feed."
+            ),
         }), 201
 
     except Exception as e:

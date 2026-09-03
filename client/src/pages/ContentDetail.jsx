@@ -235,8 +235,19 @@ export default function ContentDetail() {
         </div>
       )}
 
+      {/* Media: video/audio get the player; any other post with a media
+          URL (image posts, articles with a cover file) renders the image.
+          `url` is now ABSOLUTE from the API, so this works across origins. */}
       {(item.type === "video" || item.type === "audio") && mediaUrl && (
         <MediaPlayer type={item.type} url={mediaUrl} />
+      )}
+      {item.type !== "video" && item.type !== "audio" && mediaUrl && (
+        <img
+          src={mediaUrl}
+          alt={item.title || "Post media"}
+          className="w-full max-h-[540px] object-cover rounded-xl border border-line bg-slate-50"
+          onError={(e) => { e.currentTarget.style.display = "none"; }}
+        />
       )}
 
       <div className="prose-content text-navy/70 leading-relaxed whitespace-pre-line text-[15px]">

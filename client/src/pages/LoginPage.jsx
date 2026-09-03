@@ -8,6 +8,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [adminBlocked, setAdminBlocked] = useState(false);
+  const sessionExpired =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('session') === 'expired';
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -32,7 +35,10 @@ export default function LoginPage() {
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
       }
-      navigate('/');
+      // Return the user to where they were (e.g. after a session-expiry
+      // redirect) instead of always dumping them on the home feed.
+      const next = new URLSearchParams(window.location.search).get('next');
+      navigate(next && next.startsWith('/') ? next : '/');
     } catch (err) {
       const message = err.message || 'Invalid Username or Password.';
       setErrorMsg(message);
@@ -54,6 +60,12 @@ export default function LoginPage() {
       {errorMsg && (
         <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
           {errorMsg}
+        </div>
+      )}
+
+      {sessionExpired && !errorMsg && (
+        <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs text-center">
+          Your session expired — please log in again.
         </div>
       )}
 

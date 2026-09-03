@@ -136,6 +136,12 @@ ${form.body}`;
 
   async function handleSubmit(e) {
     e.preventDefault();
+    // Guard: without a logged-in user there is no authorId — this used to
+    // crash with "Cannot read properties of null (reading 'id')".
+    if (!user?.id) {
+      navigate("/login?next=/create", { replace: true });
+      return;
+    }
     if (!form.title.trim() || !form.body.trim() || !form.categoryId) {
       setError("Title, content, and a category are all required.");
       return;
