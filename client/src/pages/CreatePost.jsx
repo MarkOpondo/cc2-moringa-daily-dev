@@ -129,7 +129,6 @@ export default function CreatePost() {
       setResult({
         id: data?.content_id ?? data?.id ?? null,
         status: data?.status ?? "Pending",
-        reason: data?.publish_reason || null,
       });
     } catch (err) {
       setError(err.message || "Failed to create post.");
@@ -166,11 +165,6 @@ export default function CreatePost() {
               ? "Everyone in the community can see it right now."
               : "An admin will review it shortly — it goes live once approved."}
           </p>
-          {result.reason && (
-            <p className="text-[11px] text-muted font-mono pt-1">
-              {result.reason}
-            </p>
-          )}
         </div>
 
         <div className="flex gap-2 justify-center">

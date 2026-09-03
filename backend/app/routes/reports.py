@@ -3,7 +3,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
 from app.models import Content, ContentReport, User
-from app.utils import iso_utc, role_required
+from app.utils import role_required
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -71,7 +71,7 @@ def list_reports():
     for report in reports:
         content = db.session.get(Content, report.ContentID)
         reporter = db.session.get(User, report.ReportedBy)
-        created_at = iso_utc(report.CreatedAt) if report.CreatedAt else None
+        created_at = report.CreatedAt.isoformat() if report.CreatedAt else None
         status = report.Status or "Pending"
         result.append({
             "id": report.ReportID,

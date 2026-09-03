@@ -1,8 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.utils import iso_utc
-
 from app.extensions import db
 from app.models import (
     Content,
@@ -378,10 +376,10 @@ def get_notifications():
                 "content_id": getattr(n, "ContentID", None),
                 "contentId": getattr(n, "ContentID", None),
                 "created_at": (
-                    iso_utc(n.CreatedAt) if getattr(n, "CreatedAt", None) else None
+                    n.CreatedAt.isoformat() if getattr(n, "CreatedAt", None) else None
                 ),
                 "createdAt": (
-                    iso_utc(n.CreatedAt) if getattr(n, "CreatedAt", None) else None
+                    n.CreatedAt.isoformat() if getattr(n, "CreatedAt", None) else None
                 ),
             }
             for n in notifications

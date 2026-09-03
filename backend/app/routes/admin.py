@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required
 
 from app.extensions import db
 from app.models import Content, Notification, Profile, User
-from app.utils import iso_utc, role_required
+from app.utils import role_required
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -35,10 +35,10 @@ def get_pending_content():
             "duration": getattr(item, "Duration", None),
             "status": item.Status,
             "created_at": (
-                iso_utc(item.CreatedAt)
+                item.CreatedAt.isoformat() if item.CreatedAt else None
             ),
             "createdAt": (
-                iso_utc(item.CreatedAt)
+                item.CreatedAt.isoformat() if item.CreatedAt else None
             ),
             "author": (
                 item.author.Username if getattr(item, "author", None) else "Unknown"
@@ -111,7 +111,7 @@ def update_content_status(content_id):
     # categories (their feeds changed).
     if stored_status == "Published" and was_pending:
         try:
-            from app.Routes.content import _notify_subscribers
+            from app.routes.content import _notify_subscribers
             _notify_subscribers(content)
         except Exception:
             pass
