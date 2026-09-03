@@ -7,7 +7,12 @@ from app.extensions import db, jwt, migrate
 
 
 def create_app(config_name=None):
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="../static")
+    # Serve uploaded static media files
+    @app.route("/static/uploads/<path:filname>")
+    def serve__upload(filename):
+        upload_dir = os.path.join(app.root_path, "..", "static", "uploads")
+        return send_from_directory(upload_dir, filename)
 
     # Load configuration from config.py
     if not config_name:

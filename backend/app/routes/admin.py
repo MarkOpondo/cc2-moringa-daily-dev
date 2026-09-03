@@ -11,7 +11,7 @@ admin_bp = Blueprint("admin", __name__)
 # --------------------- CONTENT MODERATION --------------------- #
 
 # Endpoint: GET /api/admin/pending-content
-@admin_bp.get("/pending-content")
+@admin_bp.get("/pending-content",strict_slashes=False)
 @jwt_required()
 @role_required("Admin")
 def get_pending_content():
@@ -106,7 +106,7 @@ def delete_content(content_id):
 # --------------------- USER MANAGEMENT --------------------- #
 
 # Endpoint: GET /api/admin/users
-@admin_bp.get("/users")
+@admin_bp.get("/users",strict_slashes=False)
 @jwt_required()
 @role_required("Admin")
 def list_all_users():

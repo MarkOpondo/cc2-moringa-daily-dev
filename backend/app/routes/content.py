@@ -1,10 +1,17 @@
-from flask import Blueprint, request, jsonify
+import os
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from werkzeug.utils import secure_filename
+
 from app.extensions import db
 from app.models import Content, User, Category, Subscription, Notification
 from app.utils import role_required
 
 content_bp = Blueprint("content", __name__)
+
+DEFAULT_AVATAR = "https://ui-avatars.com/api/?background=random&name="
+DEFAULT_COVER = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop"
+BASE_URL = "http://127.0.0.1:5001"
 
 
 def safe_get_user_id():
@@ -18,8 +25,6 @@ def safe_get_user_id():
 
 
 def _notify_subscribers(content_item):
-    """Send notifications to users subscribed to this content's categories."""
-    notifications = []
     """Send notifications to users subscribed to this content's categories."""
     notifications = []
     for category in content_item.categories:
@@ -36,19 +41,21 @@ def _notify_subscribers(content_item):
                     )
                 )
 
-
     if notifications:
         db.session.add_all(notifications)
         db.session.commit()
 
 
 # -------------------------------------------------------------------
-# 1. LIST CONTENT
+# 1. LIST CONTENT (WITH PAGINATION)
 # -------------------------------------------------------------------
 @content_bp.route("", methods=["GET"], strict_slashes=False)
 @content_bp.route("/", methods=["GET"], strict_slashes=False)
 @jwt_required(optional=True)
 def list_content():
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+
     category_id = request.args.get("category_id", type=int)
     category_name = request.args.get("category")
     status = request.args.get("status", "Published")
@@ -73,27 +80,44 @@ def list_content():
     if status and status.lower() != "all":
         query = query.filter_by(Status=status)
 
-    items = query.order_by(Content.CreatedAt.desc()).all()
+    # 4. Apply Pagination
+    paginated_query = query.order_by(Content.CreatedAt.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
 
-    response = []
-    for content in items:
-        author_data = {"username": None, "profile_image": None}
-        if getattr(content, "author", None):
-            author_data["username"] = content.author.Username
-            if getattr(content.author, "profile", None):
-                author_data["profile_image"] = getattr(content.author.profile, "ProfileImage", None)
+    items_data = []
+    for content in paginated_query.items:
+        author_username = content.author.Username if getattr(content, "author", None) else "Anonymous"
+        profile_img = None
+        if getattr(content, "author", None) and getattr(content.author, "profile", None):
+            profile_img = getattr(content.author.profile, "ProfileImage", None)
 
-        response.append({
+        if not profile_img:
+            profile_img = f"{DEFAULT_AVATAR}{author_username}"
+        elif not profile_img.startswith("http"):
+            profile_img = f"{BASE_URL}{profile_img}"
+
+        content_img = content.ContentURL
+        if not content_img:
+            content_img = DEFAULT_COVER
+        elif not content_img.startswith("http"):
+            content_img = f"{BASE_URL}{content_img}"
+
+        items_data.append({
             "id": content.ContentID,
             "content_id": content.ContentID,
             "title": content.Title,
             "description": content.Description,
             "content_type": content.ContentType,
-            "content_url": content.ContentURL,
+            "content_image": content_img,
+            "content_url": content.ContentURL or content_img,
             "status": content.Status,
             "is_approved": getattr(content, "IsApproved", False),
             "author_id": content.UserID,
-            "author": author_data,
+            "author": {
+                "username": author_username,
+                "profile_image": profile_img
+            },
             "views_count": getattr(content, "ViewsCount", 0),
             "likes_count": getattr(content, "LikesCount", 0),
             "categories": [
@@ -103,7 +127,17 @@ def list_content():
             "created_at": content.CreatedAt.isoformat() if content.CreatedAt else None,
         })
 
-    return jsonify(response), 200
+    return jsonify({
+        "items": items_data,
+        "pagination": {
+            "total_items": paginated_query.total,
+            "total_pages": paginated_query.pages,
+            "current_page": paginated_query.page,
+            "per_page": paginated_query.per_page,
+            "has_next": paginated_query.has_next,
+            "has_prev": paginated_query.has_prev
+        }
+    }), 200
 
 
 # -------------------------------------------------------------------
@@ -115,11 +149,18 @@ def get_single_content(content_id):
     if not item:
         return jsonify({"error": "Content not found"}), 404
 
-    author_data = {"username": None, "profile_image": None}
+    author_data = {"username": "Anonymous", "profile_image": f"{DEFAULT_AVATAR}Anonymous"}
     if getattr(item, "author", None):
         author_data["username"] = item.author.Username
-        if getattr(item.author, "profile", None):
-            author_data["profile_image"] = getattr(item.author.profile, "ProfileImage", None)
+        profile_img = getattr(item.author.profile, "ProfileImage", None) if getattr(item.author, "profile", None) else None
+        if not profile_img:
+            author_data["profile_image"] = f"{DEFAULT_AVATAR}{item.author.Username}"
+        else:
+            author_data["profile_image"] = profile_img if profile_img.startswith("http") else f"{BASE_URL}{profile_img}"
+
+    content_img = item.ContentURL if item.ContentURL else DEFAULT_COVER
+    if content_img and not content_img.startswith("http"):
+        content_img = f"{BASE_URL}{content_img}"
 
     return jsonify({
         "id": item.ContentID,
@@ -128,6 +169,7 @@ def get_single_content(content_id):
         "description": item.Description,
         "type": item.ContentType,
         "content_type": item.ContentType,
+        "content_image": content_img,
         "url": item.ContentURL,
         "content_url": item.ContentURL,
         "status": item.Status,
@@ -153,7 +195,6 @@ def create_content():
         if not user_id:
             return jsonify({"error": "Unauthorized user"}), 401
 
-        # Handle JSON or Multipart Form-Data
         if request.is_json:
             data = request.get_json() or {}
             file = None
@@ -169,17 +210,15 @@ def create_content():
         if not title:
             return jsonify({"error": "Title is required"}), 400
 
-        # File Upload Handling
         file_url = data.get("content_url") or ""
         if file:
             filename = secure_filename(file.filename)
-            upload_dir = current_app.config.get("UPLOAD_FOLDER", "static/uploads")
+            upload_dir = current_app.config.get("UPLOAD_FOLDER", os.path.join(current_app.root_path, "..", "static", "uploads"))
             os.makedirs(upload_dir, exist_ok=True)
             save_path = os.path.join(upload_dir, filename)
             file.save(save_path)
             file_url = f"/static/uploads/{filename}"
 
-        # Status Check Constraint Compliance
         req_status = str(data.get("status", "")).capitalize()
         status = req_status if req_status in ["Draft", "Published", "Archived"] else "Published"
 
@@ -200,9 +239,12 @@ def create_content():
         db.session.add(new_content)
         db.session.commit()
 
+        # Notify category subscribers after successful commit
+        _notify_subscribers(new_content)
+
         return jsonify({
             "message": "Content submitted successfully!",
-            "content_id": getattr(new_content, "ContentID", getattr(new_content, "id", None)),
+            "content_id": new_content.ContentID,
             "status": new_content.Status
         }), 201
 
@@ -212,16 +254,15 @@ def create_content():
 
 
 # -------------------------------------------------------------------
-# EDIT CONTENT (PUT/PATCH)
+# 4. EDIT CONTENT (PUT/PATCH)
 # -------------------------------------------------------------------
-@content_bp.route("/<int:content_id>", methods=["PUT", "PATCH"],strict_slashes=False)
+@content_bp.route("/<int:content_id>", methods=["PUT", "PATCH"], strict_slashes=False)
 @jwt_required()
 def edit_content(content_id):
     item = db.session.get(Content, content_id)
     if not item:
         return jsonify({"error": "Content not found"}), 404
 
-    # 1. User Identity & Permission Check
     try:
         user_id = safe_get_user_id()
     except (ValueError, TypeError):
@@ -231,11 +272,9 @@ def edit_content(content_id):
     if not current_user:
         return jsonify({"error": "User not found"}), 404
 
-    # Authorize: Only the author or an Admin can edit
     if item.UserID != current_user.UserID and current_user.Role != "Admin":
         return jsonify({"error": "Forbidden: Cannot edit another user's content"}), 403
 
-    # 2. Extract Body (JSON or Form Data)
     if request.is_json:
         data = request.get_json() or {}
         file = None
@@ -243,7 +282,6 @@ def edit_content(content_id):
         data = request.form.to_dict()
         file = request.files.get("file") or request.files.get("content_url")
 
-    # 3. Content Type Validation (if provided)
     raw_type = data.get("type") or data.get("content_type")
     if raw_type:
         formatted_type = str(raw_type).capitalize()
@@ -252,10 +290,9 @@ def edit_content(content_id):
             return jsonify({"error": f"Invalid Content type. Must be one of: {', '.join(allowed_types)}"}), 400
         item.ContentType = formatted_type
 
-    # 4. Handle Optional File Re-upload
     if file:
         filename = secure_filename(file.filename)
-        upload_dir = current_app.config.get("UPLOAD_FOLDER", "static/uploads")
+        upload_dir = current_app.config.get("UPLOAD_FOLDER", os.path.join(current_app.root_path, "..", "static", "uploads"))
         os.makedirs(upload_dir, exist_ok=True)
         save_path = os.path.join(upload_dir, filename)
         file.save(save_path)
@@ -263,19 +300,16 @@ def edit_content(content_id):
     elif "url" in data or "content_url" in data:
         item.ContentURL = data.get("url") or data.get("content_url")
 
-    # 5. Update Status Constraint Compliance
     if "status" in data:
         req_status = str(data.get("status")).capitalize()
         if req_status in ["Draft", "Published", "Archived"]:
             item.Status = req_status
 
-    # 6. Basic Fields Update
     if "title" in data or "Title" in data:
         item.Title = data.get("title") or data.get("Title")
     if "description" in data or "Description" in data or "body" in data:
         item.Description = data.get("description") or data.get("Description") or data.get("body")
 
-    # 7. Category Association Update
     category_id = data.get("category_id") or data.get("category") or data.get("categoryId")
     if category_id:
         try:
@@ -286,7 +320,6 @@ def edit_content(content_id):
         except (ValueError, TypeError):
             return jsonify({"error": "Invalid Category ID format"}), 400
 
-    # 8. Save Changes
     try:
         db.session.commit()
         return jsonify({
@@ -305,16 +338,15 @@ def edit_content(content_id):
 
 
 # -------------------------------------------------------------------
-# DELETE CONTENT
+# 5. DELETE CONTENT
 # -------------------------------------------------------------------
-@content_bp.delete("/<int:content_id>",strict_slashes=False)
+@content_bp.delete("/<int:content_id>", strict_slashes=False)
 @jwt_required()
 def delete_content(content_id):
     item = db.session.get(Content, content_id)
     if not item:
         return jsonify({"error": "Content not found"}), 404
 
-    # 1. User Identity Check
     try:
         user_id = safe_get_user_id()
     except (ValueError, TypeError):
@@ -324,11 +356,9 @@ def delete_content(content_id):
     if not current_user:
         return jsonify({"error": "User not found"}), 404
 
-    # 2. Authorization Check (Author or Admin only)
     if item.UserID != current_user.UserID and current_user.Role != "Admin":
         return jsonify({"error": "Forbidden: Cannot delete this item"}), 403
 
-    # 3. Database Deletion
     try:
         db.session.delete(item)
         db.session.commit()
@@ -340,8 +370,9 @@ def delete_content(content_id):
         db.session.rollback()
         return jsonify({"error": "Failed to delete content", "details": str(e)}), 500
 
+
 # -------------------------------------------------------------------
-# FLAG CONTENT
+# 6. FLAG CONTENT
 # -------------------------------------------------------------------
 @content_bp.route("/<int:content_id>/flag", methods=["PATCH"], strict_slashes=False)
 @jwt_required()
@@ -352,14 +383,10 @@ def flag_content(content_id):
         return jsonify({"error": "Content not found"}), 404
 
     try:
-        # Mark as unapproved
         if hasattr(item, "IsApproved"):
             item.IsApproved = False
 
-        # Set status to Archived to keep compliance with Status CheckConstraints 
-        # ('Draft', 'Published', 'Archived')
         item.Status = "Archived"
-
         db.session.commit()
 
         return jsonify({
