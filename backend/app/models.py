@@ -60,6 +60,8 @@ class Profile(db.Model):
     Bio = db.Column(db.Text, nullable=True)
     ProfileImage = db.Column(db.String(255), nullable=True)
     Interests = db.Column(db.Text, nullable=True)
+    Skills = db.Column(db.Text, nullable=True)
+    GithubURL = db.Column(db.String(255), nullable=True)
     CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     UpdatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -86,6 +88,7 @@ class Content(db.Model):
     Description = db.Column(db.Text, nullable=True)
     ContentType = db.Column(db.String(50), nullable=True)
     ContentURL = db.Column(db.String(255), nullable=True)
+    ThumbnailURL = db.Column(db.String(500), nullable=True)
     Status = db.Column(db.String(50), nullable=True)
     IsApproved = db.Column(db.Boolean, default=False)
     CreatedAt = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))

@@ -58,6 +58,7 @@ def list_content():
             "description": content.Description,
             "type": content.ContentType,
             "url": content.ContentURL,
+            "thumbnail": content.ThumbnailURL,
             "status": content.Status,
             "author_id": content.UserID,
             "categories": [
@@ -82,6 +83,7 @@ def get_single_content(content_id):
         "description": item.Description,
         "type": item.ContentType,
         "url": item.ContentURL,
+        "thumbnail": item.ThumbnailURL,
         "status": item.Status,
         "author_id": item.UserID,
         "categories": [
@@ -120,14 +122,16 @@ def create_content():
         return jsonify({"error": "Category not found"}), 404
 
     # Auto-approve for admin/tech_writer; default to pending for regular users
-    status = "Approved" if user.Role in ["admin", "tech_writer"] else "pending"
-    is_approved = True if status == "Approved" else False
+    content_type = data["type"].capitalize()
+
+    status = "Published" if user.Role in ["admin", "tech_writer"] else "Pending"
+    is_approved = True if user.Role in ["admin", "tech_writer"] else False
 
     new_content = Content(
         UserID=user_id,
         Title=data["title"],
         Description=data.get("description"),
-        ContentType=data["type"],
+        ContentType=content_type,
         ContentURL=data.get("url"),
         Status=status,
         IsApproved=is_approved

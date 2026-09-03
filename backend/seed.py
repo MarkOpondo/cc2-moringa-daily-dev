@@ -99,6 +99,7 @@ def seed_database():
                 title = item.get("title")
                 description = item.get("description")
                 article_url = item.get("canonical_url") or item.get("url")
+                thumbnail_url = item.get("cover_image") or ""
 
                 if not username or not title or not description:
                     continue
@@ -109,6 +110,7 @@ def seed_database():
                     Description=description,
                     ContentType="Article",
                     ContentURL=article_url,
+                    ThumbnailURL=thumbnail_url,
                     Status="Published",
                     IsApproved=True
                 )
