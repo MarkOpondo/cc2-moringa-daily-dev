@@ -31,11 +31,14 @@ export async function apiRequest(endpoint, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(
+    // Include the backend's `details` when present so schema/config errors
+    // are visible in the UI instead of a generic message.
+    const base =
       data?.error ||
-        data?.message ||
-        `Request failed with status ${response.status}`
-    );
+      data?.message ||
+      `Request failed with status ${response.status}`;
+    const detail = data?.details ? ` (${data.details})` : "";
+    throw new Error(base + detail);
   }
 
   return data;
