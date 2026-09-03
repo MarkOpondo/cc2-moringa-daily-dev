@@ -73,6 +73,26 @@ class DevelopmentConfig(Config):
     )
 
 
+def _normalize_database_uri(uri):
+    """Render (and some hosts) hand out postgres://… URLs, which SQLAlchemy
+    1.4+ rejects — it needs postgresql://. Normalise transparently."""
+    if uri and uri.startswith("postgres://"):
+        return uri.replace("postgres://", "postgresql://", 1)
+    return uri
+
+
+class ProductionConfig(Config):
+    DEBUG = False
+
+    SQLALCHEMY_DATABASE_URI = _normalize_database_uri(
+        os.environ.get(
+            "DATABASE_URL",
+            f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
+        )
+    )
+
+
 config_by_name = {
-    "development": DevelopmentConfig
+    "development": DevelopmentConfig,
+    "production": ProductionConfig,
 }

@@ -148,12 +148,32 @@ def fix_content_status_constraint(engine):
             return True
         return False
 
-    # Postgres & friends: swap the constraint directly (best effort)
+    # Postgres: inspect the actual check constraints on `content` first —
+    # create_all names them via the metadata convention, migrations use a
+    # different name, so never assume; only touch it when it's really wrong.
     try:
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT conname, pg_get_constraintdef(oid) AS def "
+                "FROM pg_constraint "
+                "WHERE conrelid = 'content'::regclass AND contype = 'c'"
+            )).fetchall()
+
+        status_constraints = [
+            (name, definition) for name, definition in rows
+            if '"Status"' in definition or "status" in definition.lower()
+        ]
+
+        needs_fix = any("Pending" not in definition
+                        for _, definition in status_constraints)
+        if not needs_fix:
+            return False
+
         with engine.begin() as conn:
-            conn.execute(text(
-                "ALTER TABLE content DROP CONSTRAINT IF EXISTS check_valid_content_status"
-            ))
+            # Drop every status check that lacks 'Pending', then add the
+            # correct one.
+            for name, _ in status_constraints:
+                conn.execute(text(f'ALTER TABLE content DROP CONSTRAINT "{name}"'))
             conn.execute(text(
                 f"ALTER TABLE content ADD CONSTRAINT check_valid_content_status "
                 f"CHECK ({PENDING_STATUS_CONSTRAINT})"
@@ -183,9 +203,22 @@ def repair_schema(engine, verbose=True):
 
 
 def check_and_repair(app, verbose=True):
-    """Entry point used at app start: quietly repair drift if detected."""
+    """Entry point used at app start.
+
+    - empty database  -> create all tables + stamp migration head
+                         (first boot on a fresh Postgres, e.g. on Render)
+    - existing schema -> repair any drift idempotently
+    """
     with app.app_context():
         engine = db.engine
         if database_is_empty(engine):
-            return False  # nothing to repair yet (fresh DB, create_all handles it)
+            db.create_all()
+            try:
+                from flask_migrate import stamp
+                stamp(revision="head")
+            except Exception:
+                pass
+            if verbose:
+                print("ℹ empty database — tables created at startup")
+            return False  # nothing was "repaired", but schema was bootstrapped
         return repair_schema(engine, verbose=verbose)

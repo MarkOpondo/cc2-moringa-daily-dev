@@ -22,6 +22,7 @@ import RoleBadge from "../components/ui/RoleBadge";
 import CommentThread from "../components/content/CommentThread";
 import MediaPlayer from "../components/content/MediaPlayer";
 import { ContentCardSkeleton } from "../components/ui/Skeleton";
+import { API_BASE_URL } from "../services/api";
 
 const TYPE_ICON = { video: Video, audio: Headphones, article: FileText };
 
@@ -132,7 +133,7 @@ export default function ContentDetail() {
     const prompt = `Summarize the following article into 3 concise bullet points:\n\nTitle: ${item.title}\nContent: ${bodyText}`;
 
     try {
-      const res = await fetch("http://localhost:5001/api/ai/generate", {
+      const res = await fetch(`${API_BASE_URL}/api/ai/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
