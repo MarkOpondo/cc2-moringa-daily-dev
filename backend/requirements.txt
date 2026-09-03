@@ -13,3 +13,5 @@ flask-marshmallow>=1.3.0
 psycopg2-binary>=2.9.10
 itsdangerous>=2.2.0
 python-dotenv>=1.0.0
+
+

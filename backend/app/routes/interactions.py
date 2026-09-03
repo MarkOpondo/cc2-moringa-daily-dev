@@ -1,138 +1,309 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from app.extensions import db
-from app.models import ContentReaction, Share, Wishlist
+from app.models import (
+    Content,
+    ContentReaction,
+    Notification,
+    Share,
+    User,
+    Wishlist,
+)
 
 interactions_bp = Blueprint("interactions", __name__)
 
-#============================== REACTIONS ==============================
 
-# GET REACTIONS FOR CONTENT (PUBLIC)
-@interactions_bp.get("/content/<int:content_id>/reactions")
-def get_content_reactions(content_id):
-    reactions = ContentReaction.query.filter_by(ContentID=content_id).all()
-    return jsonify([
-        {
-            "id": getattr(r, "ReactionID", getattr(r, "id", None)),
-            "user_id": r.UserID,
-            "type": r.Reaction
-        } for r in reactions
-    ]), 200
+def safe_get_user_id():
+    """Safely extract integer user ID from JWT identity."""
+    identity = get_jwt_identity()
+    if isinstance(identity, dict):
+        return int(identity.get("id"))
+    return int(identity)
 
 
-# REACT TO CONTENT
+# ==========================================
+# 1. CONTENT LIKES & REACTIONS
+# ==========================================
+
+@interactions_bp.patch("/posts/<int:post_id>/like")
+@jwt_required()
+def toggle_like(post_id):
+    content = db.session.get(Content, post_id)
+    if not content:
+        return jsonify({"error": "Content not found"}), 404
+
+    try:
+        current_user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
+
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    liked = data.get("liked", True)
+
+    try:
+        existing_reaction = ContentReaction.query.filter_by(
+            ContentID=post_id, UserID=current_user_id
+        ).first()
+
+        if liked:
+            if not existing_reaction:
+                new_reaction = ContentReaction(
+                    ContentID=post_id, UserID=current_user_id, Reaction="like"
+                )
+                db.session.add(new_reaction)
+
+                if content.UserID != current_user_id:
+                    notification = Notification(
+                        UserID=content.UserID,
+                        ContentID=content.ContentID,
+                        Message=f"{current_user.Username} liked your post: '{content.Title}'",
+                    )
+                    db.session.add(notification)
+            elif existing_reaction.Reaction != "like":
+                existing_reaction.Reaction = "like"
+        else:
+            if existing_reaction and existing_reaction.Reaction == "like":
+                db.session.delete(existing_reaction)
+
+                if content.UserID != current_user_id:
+                    notification = Notification(
+                        UserID=content.UserID,
+                        ContentID=content.ContentID,
+                        Message=f"{current_user.Username} unliked your post: '{content.Title}'",
+                    )
+                    db.session.add(notification)
+
+        db.session.commit()
+
+        actual_likes_count = ContentReaction.query.filter_by(
+            ContentID=post_id, Reaction="like"
+        ).count()
+
+        if hasattr(content, "LikesCount"):
+            content.LikesCount = actual_likes_count
+            db.session.commit()
+        elif hasattr(content, "likes_count"):
+            content.likes_count = actual_likes_count
+            db.session.commit()
+
+        is_liked = liked and (existing_reaction is not None or liked)
+        comments_count = len(content.comments) if hasattr(content, "comments") else 0
+        formatted_date = (
+            content.CreatedAt.strftime("%d %b %Y") if content.CreatedAt else None
+        )
+
+        return jsonify({
+            "content_id": content.ContentID,
+            "content_type": content.ContentType,
+            "content_url": content.ContentURL,
+            "views_count": getattr(content, "ViewsCount", 0),
+            "likes_count": actual_likes_count,
+            "is_liked": is_liked,
+            "comments_count": comments_count,
+            "created_at": formatted_date,
+            "title": content.Title,
+            "description": content.Description,
+            "status": content.Status,
+            "author": {
+                "username": (
+                    content.author.Username if getattr(content, "author", None) else None
+                ),
+                "profile_image": (
+                    content.author.profile.ProfileImage
+                    if getattr(content, "author", None) and getattr(content.author, "profile", None)
+                    else None
+                ),
+            },
+            "categories": [
+                {"id": cat.CategoryID, "name": cat.Name}
+                for cat in getattr(content, "categories", [])
+            ],
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to update like status", "details": str(e)}), 500
+
+
 @interactions_bp.post("/content/<int:content_id>/reactions")
 @jwt_required()
 def react_to_content(content_id):
-    data = request.get_json()
+    content = db.session.get(Content, content_id)
+    if not content:
+        return jsonify({"error": "Content not found"}), 404
+
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "No input data provided"}), 400
+        return jsonify({"error": "No input data provided"}), 400
 
-    reaction_type = data.get("type")
-    
-    if reaction_type not in ("like", "dislike", "Like", "Love", "Haha", "Wow"):
-        return jsonify({"error": "Invalid reaction type."}), 400
+    reaction_type = data.get("type") or data.get("reaction")
+    if reaction_type not in ("like", "dislike"):
+        return jsonify({"error": "Reaction type must be 'like' or 'dislike'."}), 400
 
-    user_id = int(get_jwt_identity())
+    user_id = safe_get_user_id()
 
-    existing = ContentReaction.query.filter_by(
-        UserID=user_id,
-        ContentID=content_id
-    ).first()
+    try:
+        existing = ContentReaction.query.filter_by(
+            UserID=user_id, ContentID=content_id
+        ).first()
 
-    if existing: 
-        existing.Reaction = reaction_type
-    else:
-        reaction = ContentReaction(
-            UserID=user_id,
-            ContentID=content_id,
-            Reaction=reaction_type
-        )
-        db.session.add(reaction)
+        if existing:
+            existing.Reaction = reaction_type
+        else:
+            reaction = ContentReaction(
+                UserID=user_id, ContentID=content_id, Reaction=reaction_type
+            )
+            db.session.add(reaction)
 
-    db.session.commit()
-    return jsonify({"message": "Reaction recorded."}), 200
+        db.session.commit()
+        return jsonify({"message": "Reaction recorded."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to record reaction", "details": str(e)}), 500
 
 
-#=================================== SHARE ==============================
+# ==========================================
+# 2. SHARE
+# ==========================================
+
 @interactions_bp.post("/content/<int:content_id>/share")
 @jwt_required()
 def share_content(content_id):
-    data = request.get_json()
+    content = db.session.get(Content, content_id)
+    if not content:
+        return jsonify({"error": "Content not found"}), 404
 
+    data = request.get_json(silent=True)
     if not data:
+        return jsonify({"error": "No input data provided."}), 400
         return jsonify({"error": "No input data provided."}), 400
 
     shared_with_user_id = data.get("shared_with_user_id")
-
     if not shared_with_user_id:
         return jsonify({"error": "shared_with_user_id is required."}), 400
-    
-    share = Share(
-        UserID=int(get_jwt_identity()),
-        ContentID=content_id,
-        SharedWithUserID=shared_with_user_id
-    )       
-    db.session.add(share)    
-    db.session.commit()
 
-    return jsonify({"message": "Share recorded."}), 200
+    target_user = db.session.get(User, shared_with_user_id)
+    if not target_user:
+        return jsonify({"error": "Target user not found"}), 404
+
+    try:
+        share = Share(
+            UserID=safe_get_user_id(),
+            ContentID=content_id,
+            SharedWithUserID=shared_with_user_id,
+        )
+        db.session.add(share)
+        db.session.commit()
+
+        return jsonify({"message": "Share recorded."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to record share", "details": str(e)}), 500
 
 
-#=================================== WISHLIST ==============================
+# ==========================================
+# 3. WISHLIST
+# ==========================================
+
 @interactions_bp.get("/users/me/wishlist")
 @jwt_required()
 def get_wishlist():
-    user_id = int(get_jwt_identity())
-
+    user_id = safe_get_user_id()
     items = Wishlist.query.filter_by(UserID=user_id).all()
-    
-    return jsonify([{
-        "id": wishlist.WishlistID,
-        "content_id": wishlist.ContentID
-    } for wishlist in items]), 200
+
+    return jsonify(
+        [{"id": wishlist.WishlistID, "content_id": wishlist.ContentID} for wishlist in items]
+    ), 200
 
 
 @interactions_bp.post("/wishlist")
 @jwt_required()
 def add_to_wishlist():
-    data = request.get_json()
-
+    data = request.get_json(silent=True)
     if not data:
+        return jsonify({"error": "No input data provided"}), 400
         return jsonify({"error": "No input data provided"}), 400
 
     content_id = data.get("content_id")
-
     if not content_id:
         return jsonify({"error": "content_id is required"}), 400
-    
-    user_id = int(get_jwt_identity())
 
-    # Prevent duplicates
-    existing = Wishlist.query.filter_by(
-        UserID=user_id, ContentID=content_id
-    ).first()
+    content = db.session.get(Content, content_id)
+    if not content:
+        return jsonify({"error": "Content not found"}), 404
 
+    user_id = safe_get_user_id()
+
+    existing = Wishlist.query.filter_by(UserID=user_id, ContentID=content_id).first()
     if existing:
         return jsonify({"error": "Already in wishlist."}), 409
 
-    wishlist = Wishlist(
-        UserID=user_id,
-        ContentID=content_id
-    )    
-    db.session.add(wishlist)
-    db.session.commit()
-    return jsonify({"message": "Added to wishlist."}), 201
+    try:
+        wishlist = Wishlist(UserID=user_id, ContentID=content_id)
+        db.session.add(wishlist)
+        db.session.commit()
+        return jsonify({"message": "Added to wishlist.", "id": wishlist.WishlistID}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to add to wishlist", "details": str(e)}), 500
 
 
 @interactions_bp.delete("/wishlist/<int:wishlist_id>")
+@interactions_bp.delete("/wishlist/<int:wishlist_id>")
 @jwt_required()
 def remove_from_wishlist(wishlist_id):
-    wishlist = Wishlist.query.get_or_404(wishlist_id)
+    wishlist = db.session.get(Wishlist, wishlist_id)
+    if not wishlist:
+        return jsonify({"error": "Wishlist item not found"}), 404
 
-    if wishlist.UserID != int(get_jwt_identity()):
+    if wishlist.UserID != safe_get_user_id():
         return jsonify({"error": "Forbidden"}), 403
 
-    db.session.delete(wishlist)
-    db.session.commit()
-    return jsonify({"message": "Removed from wishlist."}), 200
+    try:
+        db.session.delete(wishlist)
+        db.session.commit()
+        return jsonify({"message": "Removed from wishlist."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to remove from wishlist", "details": str(e)}), 500
+
+
+# ==========================================
+# 4. NOTIFICATIONS
+# ==========================================
+
+@interactions_bp.get("/notifications")
+@jwt_required()
+def get_notifications():
+    try:
+        current_user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
+
+    notifications = (
+        Notification.query.filter_by(UserID=current_user_id)
+        .order_by(Notification.NotificationID.desc())
+        .all()
+    )
+
+    return jsonify(
+        [
+            {
+                "id": n.NotificationID,
+                "message": n.Message,
+                "is_read": getattr(n, "IsRead", False),
+                "content_id": getattr(n, "ContentID", None),
+                "created_at": (
+                    n.CreatedAt.strftime("%d %b %Y %H:%M")
+                    if hasattr(n, "CreatedAt") and n.CreatedAt
+                    else ""
+                ),
+            }
+            for n in notifications
+        ]
+    ), 200
