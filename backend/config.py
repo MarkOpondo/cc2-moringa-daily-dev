@@ -21,6 +21,13 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_SORT_KEYS = False
 
+    # Uploads must land inside the folder Flask actually serves /static/
+    # from (backend/app/static), otherwise uploaded media 404s.
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, "app", "static", "uploads")
+
+    # 64 MB upload ceiling (images/video/audio posts)
+    MAX_CONTENT_LENGTH = 64 * 1024 * 1024
+
     # Password reset
     FRONTEND_URL = os.environ.get(
         "FRONTEND_URL",

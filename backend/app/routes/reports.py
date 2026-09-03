@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
-from app.models import Content, ContentReport
+from app.models import Content, ContentReport, User
 from app.utils import role_required
 
 reports_bp = Blueprint("reports", __name__)
@@ -18,7 +18,9 @@ def safe_get_user_id():
 
 # --------------------- USER ENDPOINTS --------------------- #
 
-# Endpoint: POST /api/reports/content/<int:content_id>
+# Endpoint: POST /api/content/<int:content_id>/report
+# (alias: POST /api/content/<int:content_id> kept for older clients)
+@reports_bp.post("/content/<int:content_id>/report")
 @reports_bp.post("/content/<int:content_id>")
 @jwt_required()
 def report_content(content_id):
@@ -53,7 +55,7 @@ def report_content(content_id):
 # --------------------- ADMIN ENDPOINTS --------------------- #
 
 # Endpoint: GET /api/reports (with optional ?status=Pending)
-@reports_bp.get("")
+@reports_bp.get("/reports")
 @jwt_required()
 @role_required("Admin")
 def list_reports():
@@ -65,26 +67,33 @@ def list_reports():
 
     reports = query.order_by(ContentReport.CreatedAt.desc()).all()
 
+    result = []
+    for report in reports:
+        content = db.session.get(Content, report.ContentID)
+        reporter = db.session.get(User, report.ReportedBy)
+        created_at = report.CreatedAt.isoformat() if report.CreatedAt else None
+        status = report.Status or "Pending"
+        result.append({
+            "id": report.ReportID,
+            "content_id": report.ContentID,
+            "contentId": report.ContentID,
+            "user_id": report.ReportedBy,
+            "reason": report.Reason,
+            "status": status,
+            "created_at": created_at,
+            "createdAt": created_at,
+            "content": {"id": report.ContentID, "title": content.Title if content else f"Content #{report.ContentID}"},
+            "reporter": {"id": report.ReportedBy, "username": reporter.Username if reporter else f"User #{report.ReportedBy}"},
+        })
+
     return (
-        jsonify([
-            {
-                "id": report.ReportID,
-                "content_id": report.ContentID,
-                "user_id": report.ReportedBy,
-                "reason": report.Reason,
-                "status": report.Status,
-                "created_at": (
-                    report.CreatedAt.isoformat() if report.CreatedAt else None
-                ),
-            }
-            for report in reports
-        ]),
+        jsonify(result),
         200,
     )
 
 
 # Endpoint: PATCH /api/reports/<int:report_id>
-@reports_bp.patch("/<int:report_id>")
+@reports_bp.patch("/reports/<int:report_id>")
 @jwt_required()
 @role_required("Admin")
 def resolve_report(report_id):

@@ -84,8 +84,11 @@ export default function ContentDetail() {
 
   async function handleReact(type) {
     if (!user) return alert("Please log in to react.");
+    // FIX: this used to call react(id, user.id, type) — the extra user.id
+    // argument shifted "type" out of place and the API received the numeric
+    // user id as the reaction type, so every click failed with a 400.
     try {
-      const summaryData = await react(id, user.id, type);
+      const summaryData = await react(id, type);
       if (summaryData) setReactionState(summaryData);
     } catch (e) {
       console.error("Reaction failed:", e);

@@ -1,7 +1,11 @@
 import os
 from flask import Blueprint, request, jsonify
-from google import genai
 from app.models import Content
+
+try:
+    from google import genai
+except ImportError:  # google-genai not installed -> AI features degrade, app still boots
+    genai = None
 
 ai_bp = Blueprint("ai", __name__)
 
@@ -14,6 +18,9 @@ def generate_ai_text():
 
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
+
+    if genai is None:
+        return jsonify({"error": "AI features unavailable: google-genai package is not installed (pip install google-genai)"}), 503
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:

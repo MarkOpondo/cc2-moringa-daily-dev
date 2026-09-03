@@ -56,6 +56,10 @@ def register():
     if not username or not email or not password:
         return jsonify({"error": "Username, email, and password are required."}), 400
 
+    # Normalise: "admin"/"Admin"/"ADMIN" all store as "Admin" so role checks
+    # and the frontend stay consistent.
+    if str(role).lower() == "admin":
+        role = "Admin"
     allowed_roles = ["user", "tech_writer", "Admin"]
     if role not in allowed_roles:
         role = "user"
@@ -98,6 +102,7 @@ def register():
                 "username": new_user.Username,
                 "email": new_user.Email,
                 "role": new_user.Role,
+                "is_admin": str(new_user.Role).lower() == "admin",
             },
         }),
         201,
@@ -268,7 +273,6 @@ def handle_options():
 
 
 @auth_profile_bp.get("/me")
-@auth_profile_bp.get("/profiles/me")
 @auth_profile_bp.get("/auth/me")
 @jwt_required()
 def get_my_profile():
@@ -323,6 +327,11 @@ def get_my_profile():
         "is_admin": is_admin,
         "bio": profile.Bio or "",
         "interests": profile.Interests or "",
+        # Skills & GitHub MUST be included here, otherwise every page that
+        # reads /me (profile page after reload, navbar, …) shows them empty.
+        "skills": getattr(profile, "Skills", "") or "",
+        "github_url": getattr(profile, "GithubURL", "") or "",
+        "github_profile": getattr(profile, "GithubURL", "") or "",
         "profile_image": profile.ProfileImage or "",
         "posts_count": len(user_posts),
         "posts": posts_data,
@@ -338,6 +347,9 @@ def get_my_profile():
             "profile_id": profile.ProfileID,
             "bio": profile.Bio or "",
             "interests": profile.Interests or "",
+            "skills": getattr(profile, "Skills", "") or "",
+            "github_url": getattr(profile, "GithubURL", "") or "",
+            "github_profile": getattr(profile, "GithubURL", "") or "",
             "profile_image": profile.ProfileImage or "",
             "posts_count": len(user_posts),
             "posts": posts_data,
@@ -350,9 +362,11 @@ def get_my_profile():
 #UPDATE PROFILE
 #===========================================
 
-@auth_profile_bp.route("/profiles/me", methods=["PUT", "POST", "PATCH", "OPTIONS"])
-@auth_profile_bp.route("/auth/me", methods=["PUT", "POST", "PATCH", "OPTIONS"])
+# NOTE: /api/profiles/me is owned by app/routes/profile.py (profiles_bp).
+# These routes only handle /api/me and /api/auth/me so the two blueprints
+# never fight over the same URL.
 @auth_profile_bp.route("/me", methods=["PUT", "POST", "PATCH", "OPTIONS"])
+@auth_profile_bp.route("/auth/me", methods=["PUT", "POST", "PATCH", "OPTIONS"])
 def update_profile():
     # 1. Instantly return 200 for CORS preflight OPTIONS requests
     if request.method == "OPTIONS":
@@ -390,10 +404,15 @@ def update_profile():
     if "skills" in data or "tech_stack" in data:
         profile.Skills = data.get("skills") or data.get("tech_stack")
 
-    # Add GitHub profile
-    if "github_profile" in data or "github" in data or "githubUrl" in data:
-        profile.GithubProfile = (
-            data.get("github_profile") or data.get("github") or data.get("githubUrl")
+    # Add GitHub profile.
+    # FIX: the column is called GithubURL — the old code wrote to
+    # `GithubProfile`, which doesn't exist, so the URL silently vanished.
+    if "github_url" in data or "github_profile" in data or "github" in data or "githubUrl" in data:
+        profile.GithubURL = (
+            data.get("github_url")
+            or data.get("github_profile")
+            or data.get("github")
+            or data.get("githubUrl")
         )
 
     # Add Profile Image
@@ -411,7 +430,8 @@ def update_profile():
             "bio": profile.Bio or "",
             "interests": profile.Interests or "",
             "skills": getattr(profile, "Skills", "") or "",
-            "github_profile": getattr(profile, "GithubProfile", "") or "",
+            "github_url": getattr(profile, "GithubURL", "") or "",
+            "github_profile": getattr(profile, "GithubURL", "") or "",
             "profile_image": profile.ProfileImage or "",
         }
     }), 200

@@ -13,6 +13,7 @@ import AppShell from './layouts/AppShell';
 import ProfilePage from './pages/ProfilePage';
 import Home from './pages/Home';
 import ContentDetail from './pages/ContentDetail';
+import CreatePost from './pages/CreatePost';
 import CreateContent from './pages/CreateContent';
 import Categories from './pages/Categories';
 import Notifications from './pages/Notifications';
@@ -48,7 +49,10 @@ export default function App() {
           <Route element={<AppShell />}>
             <Route path="/" element={<Home />} />
             <Route path="/content/:id" element={<ContentDetail />} />
-            <Route path="/create" element={<CreateContent />} />
+            {/* Instagram-style quick composer */}
+            <Route path="/create" element={<CreatePost />} />
+            {/* Long-form article editor (with AI helpers) */}
+            <Route path="/create-article" element={<CreateContent />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/wishlist" element={<Wishlist />} />

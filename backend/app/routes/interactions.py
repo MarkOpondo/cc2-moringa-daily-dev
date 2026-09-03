@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
 from app.extensions import db
 from app.models import (
     Content,
@@ -10,15 +11,46 @@ from app.models import (
     Wishlist,
 )
 
+
 interactions_bp = Blueprint("interactions", __name__)
 
 
 def safe_get_user_id():
-    """Safely extract integer user ID from JWT identity."""
+    """Extract integer user ID safely from JWT identity."""
     identity = get_jwt_identity()
+    if not identity:
+        return None
     if isinstance(identity, dict):
         return int(identity.get("id"))
     return int(identity)
+
+
+def _reaction_summary(content_id, user_id=None):
+    """Return like/dislike counts + the current user's reaction."""
+    likes = ContentReaction.query.filter_by(
+        ContentID=content_id, Reaction="like"
+    ).count()
+    dislikes = ContentReaction.query.filter_by(
+        ContentID=content_id, Reaction="dislike"
+    ).count()
+
+    user_reaction = None
+    if user_id:
+        reaction = ContentReaction.query.filter_by(
+            ContentID=content_id, UserID=user_id
+        ).first()
+        if reaction:
+            user_reaction = reaction.Reaction
+
+    return {
+        "likes": likes,
+        "dislikes": dislikes,
+        "userReaction": user_reaction,
+        # snake_case duplicates so both frontend styles work
+        "likes_count": likes,
+        "dislikes_count": dislikes,
+        "user_reaction": user_reaction,
+    }
 
 
 # ==========================================
@@ -69,14 +101,6 @@ def toggle_like(post_id):
             if existing_reaction and existing_reaction.Reaction == "like":
                 db.session.delete(existing_reaction)
 
-                if content.UserID != current_user_id:
-                    notification = Notification(
-                        UserID=content.UserID,
-                        ContentID=content.ContentID,
-                        Message=f"{current_user.Username} unliked your post: '{content.Title}'",
-                    )
-                    db.session.add(notification)
-
         db.session.commit()
 
         actual_likes_count = ContentReaction.query.filter_by(
@@ -86,11 +110,10 @@ def toggle_like(post_id):
         if hasattr(content, "LikesCount"):
             content.LikesCount = actual_likes_count
             db.session.commit()
-        elif hasattr(content, "likes_count"):
-            content.likes_count = actual_likes_count
-            db.session.commit()
 
-        is_liked = liked and (existing_reaction is not None or liked)
+        is_liked = ContentReaction.query.filter_by(
+            ContentID=post_id, UserID=current_user_id, Reaction="like"
+        ).first() is not None
         comments_count = len(content.comments) if hasattr(content, "comments") else 0
         formatted_date = (
             content.CreatedAt.strftime("%d %b %Y") if content.CreatedAt else None
@@ -129,6 +152,28 @@ def toggle_like(post_id):
         return jsonify({"error": "Failed to update like status", "details": str(e)}), 500
 
 
+# -------------------------------------------------------------------
+# GET reaction summary (likes / dislikes / current user's reaction)
+# -------------------------------------------------------------------
+@interactions_bp.get("/content/<int:content_id>/reactions")
+@jwt_required(optional=True)
+def get_reaction_summary(content_id):
+    content = db.session.get(Content, content_id)
+    if not content:
+        return jsonify({"error": "Content not found"}), 404
+
+    try:
+        user_id = safe_get_user_id()
+    except Exception:
+        user_id = None
+
+    return jsonify(_reaction_summary(content_id, user_id)), 200
+
+
+# -------------------------------------------------------------------
+# POST a reaction ("like" / "dislike") — clicking the same reaction
+# again toggles it off (Instagram-style).
+# -------------------------------------------------------------------
 @interactions_bp.post("/content/<int:content_id>/reactions")
 @jwt_required()
 def react_to_content(content_id):
@@ -139,29 +184,62 @@ def react_to_content(content_id):
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "No input data provided"}), 400
-        return jsonify({"error": "No input data provided"}), 400
 
     reaction_type = data.get("type") or data.get("reaction")
     if reaction_type not in ("like", "dislike"):
         return jsonify({"error": "Reaction type must be 'like' or 'dislike'."}), 400
 
-    user_id = safe_get_user_id()
+    try:
+        user_id = safe_get_user_id()
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid user identity"}), 400
+
+    current_user = db.session.get(User, user_id)
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
 
     try:
         existing = ContentReaction.query.filter_by(
             UserID=user_id, ContentID=content_id
         ).first()
 
+        toggled_off = False
         if existing:
-            existing.Reaction = reaction_type
+            if existing.Reaction == reaction_type:
+                # Same reaction again -> remove it (toggle off)
+                db.session.delete(existing)
+                toggled_off = True
+            else:
+                existing.Reaction = reaction_type
         else:
             reaction = ContentReaction(
                 UserID=user_id, ContentID=content_id, Reaction=reaction_type
             )
             db.session.add(reaction)
 
+        # Notify the author when someone likes their content
+        if reaction_type == "like" and not toggled_off and content.UserID != user_id:
+            db.session.add(
+                Notification(
+                    UserID=content.UserID,
+                    ContentID=content.ContentID,
+                    Message=f"{current_user.Username} liked your post: '{content.Title}'",
+                )
+            )
+
         db.session.commit()
-        return jsonify({"message": "Reaction recorded."}), 200
+
+        if hasattr(content, "LikesCount"):
+            content.LikesCount = ContentReaction.query.filter_by(
+                ContentID=content_id, Reaction="like"
+            ).count()
+            db.session.commit()
+
+        summary = _reaction_summary(content_id, user_id)
+        summary["message"] = (
+            "Reaction removed." if toggled_off else "Reaction recorded."
+        )
+        return jsonify(summary), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Failed to record reaction", "details": str(e)}), 500
@@ -180,7 +258,6 @@ def share_content(content_id):
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "No input data provided."}), 400
         return jsonify({"error": "No input data provided."}), 400
 
     shared_with_user_id = data.get("shared_with_user_id")
@@ -227,7 +304,6 @@ def add_to_wishlist():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "No input data provided"}), 400
-        return jsonify({"error": "No input data provided"}), 400
 
     content_id = data.get("content_id")
     if not content_id:
@@ -254,7 +330,6 @@ def add_to_wishlist():
 
 
 @interactions_bp.delete("/wishlist/<int:wishlist_id>")
-@interactions_bp.delete("/wishlist/<int:wishlist_id>")
 @jwt_required()
 def remove_from_wishlist(wishlist_id):
     wishlist = db.session.get(Wishlist, wishlist_id)
@@ -274,7 +349,7 @@ def remove_from_wishlist(wishlist_id):
 
 
 # ==========================================
-# 4. NOTIFICATIONS
+# 4. NOTIFICATIONS (legacy polling endpoint)
 # ==========================================
 
 @interactions_bp.get("/notifications")
@@ -297,11 +372,14 @@ def get_notifications():
                 "id": n.NotificationID,
                 "message": n.Message,
                 "is_read": getattr(n, "IsRead", False),
+                "isRead": getattr(n, "IsRead", False),
                 "content_id": getattr(n, "ContentID", None),
+                "contentId": getattr(n, "ContentID", None),
                 "created_at": (
-                    n.CreatedAt.strftime("%d %b %Y %H:%M")
-                    if hasattr(n, "CreatedAt") and n.CreatedAt
-                    else ""
+                    n.CreatedAt.isoformat() if getattr(n, "CreatedAt", None) else None
+                ),
+                "createdAt": (
+                    n.CreatedAt.isoformat() if getattr(n, "CreatedAt", None) else None
                 ),
             }
             for n in notifications
