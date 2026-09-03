@@ -4,7 +4,11 @@ from app.extensions import db, migrate, jwt, bcrypt, cors, ma
 from config import config_by_name
 
 
-def create_app(config_class="development"):
+def create_app(config_class=None, config_name=None):
+    # Accept either kwarg (`config_class` or `config_name`) so callers
+    # like run.py's create_app(config_name="development") don't crash.
+    if config_class is None:
+        config_class = config_name or "development"
     app = Flask(__name__)
 
     # Load configuration
@@ -30,22 +34,24 @@ def create_app(config_class="development"):
         from app import models
 
     # Import route Blueprints
-    from app.routes.auth import auth_bp
-    from app.routes.users import users_bp
-    from app.routes.profile import profiles_bp
-    from app.routes.categories import categories_bp
-    from app.routes.content import content_bp
-    from app.routes.comments import comments_bp
-    from app.routes.interactions import interactions_bp
-    from app.routes.notifications import notifications_bp
-    from app.routes.reports import reports_bp
-    from app.routes.subscriptions import subscriptions_bp
-    from app.routes.comment_reactions import comment_reactions_bp
-    from app.routes.ai_routes import ai_bp
+    from app.Routes.auth_profile import auth_profile_bp
+    from app.Routes.profile import profiles_bp
+    from app.Routes.categories import categories_bp
+    from app.Routes.content import content_bp
+    from app.Routes.comments import comments_bp
+    from app.Routes.interactions import interactions_bp
+    from app.Routes.notifications import notifications_bp
+    from app.Routes.reports import reports_bp
+    from app.Routes.subscriptions import subscriptions_bp
+    from app.Routes.comment_reactions import comment_reactions_bp
+    from app.Routes.admin import admin_bp
+    from app.Routes.ai_routes import ai_bp
 
     # Register Blueprints
-    app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(users_bp, url_prefix="/api/users")
+    # auth_profile_bp carries /auth/register, /auth/login, /auth/logout,
+    # /auth/forgot-password, /auth/reset-password, /auth/change-password,
+    # /me and /auth/me (profile of the logged-in user).
+    app.register_blueprint(auth_profile_bp, url_prefix="/api")
     app.register_blueprint(profiles_bp, url_prefix="/api/profiles")
     app.register_blueprint(categories_bp, url_prefix="/api/categories")
     app.register_blueprint(content_bp, url_prefix="/api/content")
@@ -68,6 +74,7 @@ def create_app(config_class="development"):
         reports_bp,
         url_prefix="/api"
     )
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
     @app.get("/")
     def index():

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from app import db
+from app.extensions import db
 from app.models import Comment, Content, User
 
 comments_bp = Blueprint("comments", __name__)

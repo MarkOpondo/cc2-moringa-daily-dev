@@ -147,7 +147,13 @@ ${form.body}`;
     setSubmitting(true);
     try {
       const created = await createContent({ ...form, authorId: user.id });
-      navigate(`/content/${created.id}`);
+      // Backend returns { content_id, status, ... } — fall back across shapes
+      const newId = created?.content_id ?? created?.id;
+      if (newId) {
+        navigate(`/content/${newId}`);
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err.message || "Something went wrong while submitting. Please try again.");
     } finally {
