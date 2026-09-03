@@ -406,20 +406,12 @@ def create_content():
     except Exception as e:
         db.session.rollback()
 
+        from app.schema_doctor import looks_like_schema_drift, schema_drift_hint
+
         details = str(e)
         error = "Failed to submit content"
-
-        # If the local database was created from older models it may be
-        # missing columns / the 'Pending' status constraint — point the
-        # developer straight at the repair instead of a cryptic 500.
-        lowered = details.lower()
-        if ("no such column" in lowered or "has no column" in lowered
-                or "check constraint" in lowered or "duplicate column" in lowered):
-            error += (
-                " — the database schema is out of date. "
-                "Run `bash dev.sh` (or `cd backend && python setup_db.py`) "
-                "to repair it, then try again."
-            )
+        if looks_like_schema_drift(details):
+            error = schema_drift_hint()
 
         return jsonify({
             "error": error,
