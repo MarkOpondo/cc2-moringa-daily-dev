@@ -41,16 +41,16 @@ export default function CommentThread({ comment, onReply, onEdit, onDelete, dept
   }
 
   return (
-    <div className={depth > 0 ? "ml-6 pl-4 border-l border-navy-border" : ""}>
+    <div className={depth > 0 ? "ml-6 pl-4 border-l border-line" : ""}>
       <div className="flex gap-3">
         <Avatar username={comment.author?.username} role={comment.author?.role} size="sm" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-cream">{comment.author?.username}</span>
+            <span className="text-sm font-medium text-navy">{comment.author?.username}</span>
             <RoleBadge role={comment.author?.role} />
-            <span className="text-[11px] text-slate-400 font-mono">{timeAgo(comment.createdAt)}</span>
+            <span className="text-[11px] text-muted font-mono">{timeAgo(comment.createdAt)}</span>
             {comment.updatedAt && !comment.deleted && (
-              <span className="text-[11px] text-slate-400 italic">(edited)</span>
+              <span className="text-[11px] text-muted italic">(edited)</span>
             )}
           </div>
 
@@ -60,11 +60,11 @@ export default function CommentThread({ comment, onReply, onEdit, onDelete, dept
                 autoFocus
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
-                className="flex-1 px-3 py-1.5 rounded-lg bg-navy border border-navy-border text-xs text-cream focus:outline-none focus:border-brand-500"
+                className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-line text-xs text-navy focus:outline-none focus:border-brand-500"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-slate-950 text-xs font-semibold rounded-lg"
+                className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg"
               >
                 Save
               </button>
@@ -74,13 +74,13 @@ export default function CommentThread({ comment, onReply, onEdit, onDelete, dept
                   setEditing(false);
                   setEditText(comment.body);
                 }}
-                className="px-3 py-1.5 bg-navy-raised hover:bg-navy-borderLight text-slate-300 text-xs rounded-lg"
+                className="px-3 py-1.5 bg-surface hover:bg-line/60 text-navy/70 text-xs rounded-lg"
               >
                 Cancel
               </button>
             </form>
           ) : (
-            <p className={`text-sm mt-0.5 ${comment.deleted ? "text-slate-400 italic" : "text-slate-300"}`}>
+            <p className={`text-sm mt-0.5 ${comment.deleted ? "text-muted italic" : "text-navy/70"}`}>
               {comment.body}
             </p>
           )}
@@ -89,14 +89,14 @@ export default function CommentThread({ comment, onReply, onEdit, onDelete, dept
             <div className="flex items-center gap-3 mt-1.5">
               <button
                 onClick={() => setReplying((v) => !v)}
-                className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-brand-600"
+                className="flex items-center gap-1 text-[11px] text-muted hover:text-brand-600"
               >
                 <CornerDownRight className="w-3 h-3" /> Reply
               </button>
               {isOwnComment && (
                 <button
                   onClick={() => setEditing(true)}
-                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-brand-600"
+                  className="flex items-center gap-1 text-[11px] text-muted hover:text-brand-600"
                 >
                   <Pencil className="w-3 h-3" /> Edit
                 </button>
@@ -104,18 +104,18 @@ export default function CommentThread({ comment, onReply, onEdit, onDelete, dept
               {canDelete && !confirmingDelete && (
                 <button
                   onClick={() => setConfirmingDelete(true)}
-                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-red-400"
+                  className="flex items-center gap-1 text-[11px] text-muted hover:text-red-400"
                 >
                   <Trash2 className="w-3 h-3" /> Delete
                 </button>
               )}
               {confirmingDelete && (
                 <span className="flex items-center gap-2 text-[11px]">
-                  <span className="text-slate-400">Delete this comment?</span>
+                  <span className="text-muted">Delete this comment?</span>
                   <button onClick={confirmDelete} className="text-red-400 font-medium hover:underline">
                     Yes
                   </button>
-                  <button onClick={() => setConfirmingDelete(false)} className="text-slate-400 hover:underline">
+                  <button onClick={() => setConfirmingDelete(false)} className="text-muted hover:underline">
                     Cancel
                   </button>
                 </span>
@@ -130,11 +130,11 @@ export default function CommentThread({ comment, onReply, onEdit, onDelete, dept
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder={`Reply to ${comment.author?.username}…`}
-                className="flex-1 px-3 py-1.5 rounded-lg bg-navy border border-navy-border text-xs text-cream focus:outline-none focus:border-brand-500"
+                className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-line text-xs text-navy focus:outline-none focus:border-brand-500"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-slate-950 text-xs font-semibold rounded-lg"
+                className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg"
               >
                 Reply
               </button>
@@ -160,3 +160,4 @@ export default function CommentThread({ comment, onReply, onEdit, onDelete, dept
     </div>
   );
 }
+

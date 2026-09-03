@@ -1,10 +1,7 @@
-import os
-from flask import Blueprint, current_app, jsonify, request
-from flask_jwt_extended import get_jwt_identity, jwt_required
-from werkzeug.utils import secure_filename
-
-from app import db
-from app.models import Category, Content, Notification, Subscription, User
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.extensions import db
+from app.models import Content, User, Category, Subscription, Notification
 from app.utils import role_required
 
 content_bp = Blueprint("content", __name__)
@@ -23,6 +20,8 @@ def safe_get_user_id():
 def _notify_subscribers(content_item):
     """Send notifications to users subscribed to this content's categories."""
     notifications = []
+    """Send notifications to users subscribed to this content's categories."""
+    notifications = []
     for category in content_item.categories:
         subscriptions = Subscription.query.filter_by(
             CategoryID=category.CategoryID
@@ -32,10 +31,12 @@ def _notify_subscribers(content_item):
                 notifications.append(
                     Notification(
                         UserID=sub.UserID,
+                        UserID=sub.UserID,
                         ContentID=content_item.ContentID,
                         Message=f"New content in your feed: '{content_item.Title}'",
                     )
                 )
+
 
     if notifications:
         db.session.add_all(notifications)

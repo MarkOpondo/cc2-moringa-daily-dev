@@ -40,8 +40,8 @@ export default function LoginPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-center text-cream">Welcome Back</h2>
-      <p className="text-xs text-slate-400 text-center mt-1">Log in to Moringa Daily Dev to continue.</p>
+      <h2 className="text-2xl font-bold text-center text-navy">Welcome Back</h2>
+      <p className="text-xs text-muted text-center mt-1">Log in to Moringa Daily Dev to continue.</p>
 
       {errorMsg && (
         <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
@@ -51,19 +51,19 @@ export default function LoginPage() {
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1">Username</label>
+          <label className="block text-xs font-medium text-navy/70 mb-1">Username</label>
           <input 
             type="text" 
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Enter your username"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
           />
         </div>
 
         <div>
           <div className="flex justify-between items-center mb-1">
-            <label className="block text-xs font-medium text-slate-300">Password</label>
+            <label className="block text-xs font-medium text-navy/70">Password</label>
             <Link to="/forgot-password" className="text-[11px] text-brand-500 hover:underline">
               Forgot password?
             </Link>
@@ -75,13 +75,13 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-navy border border-navy-border text-sm focus:outline-none focus:border-brand-500 text-cream"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-white border border-line text-sm focus:outline-none focus:border-brand-500 text-navy"
             />
             
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cream transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-navy transition"
               title={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
@@ -96,13 +96,13 @@ export default function LoginPage() {
         <button 
           type="submit" 
           disabled={isLoading}
-          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-slate-950 font-semibold rounded-lg transition duration-200 disabled:opacity-50"
+          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition duration-200 disabled:opacity-50"
         >
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
       </form>
 
-      <p className="text-xs text-center text-slate-400 mt-6">
+      <p className="text-xs text-center text-muted mt-6">
         Don't have an account?{' '}
         <Link to="/signup" className="text-brand-500 font-semibold hover:underline">
           Sign up

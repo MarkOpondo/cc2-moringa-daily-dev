@@ -9,7 +9,7 @@ export async function listContent({
   const params = new URLSearchParams();
 
   if (categoryId) {
-    params.set("category", categoryId);
+    params.set("category_id", categoryId);
   }
 
   if (search) {
@@ -45,8 +45,8 @@ export async function createContent({
     body: JSON.stringify({
       title,
       description: body,
-      content_type: type,
-      content_url: mediaUrl || "",
+      type,
+      url: mediaUrl || "",
       category_id: categoryId,
     }),
   });

@@ -7,7 +7,7 @@ const TYPE_LABEL = { video: "Video", audio: "Audio", article: "Article" };
 const TYPE_TAG_COLOR = {
   video: "bg-blue-500/15 text-blue-400",
   audio: "bg-violet-500/15 text-violet-400",
-  article: "bg-navy-raised text-slate-300",
+  article: "bg-surface text-navy/70",
 };
 
 export default function ContentCard({ item }) {
@@ -17,9 +17,9 @@ export default function ContentCard({ item }) {
   return (
     <Link
       to={`/content/${item.id}`}
-      className="group block rounded-xl overflow-hidden border border-navy-border bg-navy hover:border-navy-borderLight hover:shadow-lg transition"
+      className="group block rounded-xl overflow-hidden border border-line bg-white hover:border-brand-500/50 hover:shadow-lg transition"
     >
-      <div className="relative aspect-video bg-navy-raised overflow-hidden">
+      <div className="relative aspect-video bg-surface overflow-hidden">
         <img
           src={item.thumbnail}
           alt=""
@@ -44,16 +44,16 @@ export default function ContentCard({ item }) {
             <TypeIcon className="w-3 h-3" strokeWidth={2} />
             {TYPE_LABEL[item.type]}
           </span>
-          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-navy-raised text-slate-400">
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-surface text-muted">
             {item.category?.name}
           </span>
         </div>
 
-        <h3 className="font-display font-bold text-cream group-hover:text-brand-400 leading-snug text-lg transition">
+        <h3 className="font-display font-bold text-navy group-hover:text-brand-400 leading-snug text-lg transition">
           {item.title}
         </h3>
 
-        <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
+        <div className="flex items-center gap-2 mt-3 text-xs text-muted">
           <span>{item.author?.username}</span>
           <span>·</span>
           <span>{timeAgo(item.createdAt)}</span>
@@ -62,3 +62,4 @@ export default function ContentCard({ item }) {
     </Link>
   );
 }
+

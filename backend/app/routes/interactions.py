@@ -139,6 +139,7 @@ def react_to_content(content_id):
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "No input data provided"}), 400
+        return jsonify({"error": "No input data provided"}), 400
 
     reaction_type = data.get("type") or data.get("reaction")
     if reaction_type not in ("like", "dislike"):
@@ -179,6 +180,7 @@ def share_content(content_id):
 
     data = request.get_json(silent=True)
     if not data:
+        return jsonify({"error": "No input data provided."}), 400
         return jsonify({"error": "No input data provided."}), 400
 
     shared_with_user_id = data.get("shared_with_user_id")
@@ -225,6 +227,7 @@ def add_to_wishlist():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "No input data provided"}), 400
+        return jsonify({"error": "No input data provided"}), 400
 
     content_id = data.get("content_id")
     if not content_id:
@@ -250,6 +253,7 @@ def add_to_wishlist():
         return jsonify({"error": "Failed to add to wishlist", "details": str(e)}), 500
 
 
+@interactions_bp.delete("/wishlist/<int:wishlist_id>")
 @interactions_bp.delete("/wishlist/<int:wishlist_id>")
 @jwt_required()
 def remove_from_wishlist(wishlist_id):
