@@ -56,7 +56,7 @@ def create_app(config_class="development"):
     )
     app.register_blueprint(
         subscriptions_bp,
-        url_prefix="/api"
+        url_prefix="/api/subscriptions"
     )
     app.register_blueprint(
         comment_reactions_bp,
