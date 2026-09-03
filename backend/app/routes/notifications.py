@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from app.utils import iso_utc
+
 from app.extensions import db
 from app.models import Notification
 
@@ -18,7 +20,7 @@ def _current_user_id():
 
 def _serialize(n):
     is_read = bool(getattr(n, "IsRead", False))
-    created_at = n.CreatedAt.isoformat() if getattr(n, "CreatedAt", None) else None
+    created_at = iso_utc(n.CreatedAt) if getattr(n, "CreatedAt", None) else None
     content_id = getattr(n, "ContentID", None)
     return {
         "id": n.NotificationID,

@@ -6,6 +6,21 @@ from app.extensions import db
 from app.models import User
 
 
+def iso_utc(dt):
+    """ISO-8601 string that JavaScript's Date parses as UTC.
+
+    SQLite returns naive datetimes (stored as UTC). Without the 'Z' suffix,
+    `new Date("2026-09-04T01:00:00")` is parsed as LOCAL time — in Nairobi
+    (UTC+3) every brand-new post displayed as "3h ago". Appending 'Z' fixes
+    relative-time rendering everywhere.
+    """
+    if not dt:
+        return None
+    if getattr(dt, "tzinfo", None) is not None:
+        return dt.isoformat()
+    return dt.isoformat() + "Z"
+
+
 def role_required(*allowed_roles):
     """Restrict an endpoint (already behind @jwt_required()) to certain roles.
 

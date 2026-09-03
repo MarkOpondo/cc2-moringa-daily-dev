@@ -128,6 +128,13 @@ r = client.get(f"/api/content/{ANN_POST_ID}")
 check("single content GET 200", r.status_code == 200, r.get_json())
 check("single content has likes_count", "likes_count" in r.get_json(), r.get_json())
 check("single content has author", r.get_json().get("author", {}).get("username") == "ann", r.get_json())
+data = r.get_json()
+check("createdAt camelCase alias present (ContentCard)", "createdAt" in data, list(data.keys()))
+check("created_at is UTC-aware (ends Z) — fixes +3h '3 hours ago' in Nairobi",
+      isinstance(data.get("created_at"), str) and data["created_at"].endswith("Z"), data.get("created_at"))
+check("media url is ABSOLUTE (frontend origin differs from backend)",
+      isinstance(data.get("url"), str) and data["url"].startswith("http"), data.get("url"))
+check("mediaUrl camelCase alias present", "mediaUrl" in data, list(data.keys()))
 
 print("\n== 4. REACTIONS: like / summary / toggle-off ==")
 r = client.post(f"/api/content/{ANN_POST_ID}/reactions",
@@ -204,10 +211,16 @@ r = client.post("/api/content", headers=as_user(WRITER_TOKEN), json={
     "type": "article", "category_id": CAT_ID})
 check("tech_writer post 201", r.status_code == 201, r.get_json())
 check("tech_writer post Published instantly", r.get_json().get("status") == "Published", r.get_json())
+check("writer response explains WHY it published (publish_reason)",
+      bool(r.get_json().get("publish_reason")), r.get_json())
+check("writer response has published_immediately flag",
+      r.get_json().get("published_immediately") is True, r.get_json())
 
 r = client.get("/api/users/me/notifications", headers=as_user(ANN_TOKEN))
 check("subscriber notified of new content", any(
     "New content in your feed" in n["message"] for n in r.get_json()), r.get_json())
+check("notification created_at is UTC-aware (ends Z)",
+      all(str(n.get("created_at", "")).endswith("Z") for n in r.get_json()), r.get_json()[:2])
 
 print("\n== 8. REPORTS + WISHLIST + SEARCH ==")
 r = client.post(f"/api/content/{ANN_POST_ID}/report",
