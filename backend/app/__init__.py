@@ -49,6 +49,7 @@ def create_app(config_class="development"):
     app.register_blueprint(profiles_bp, url_prefix="/api/profiles")
     app.register_blueprint(categories_bp, url_prefix="/api/categories")
     app.register_blueprint(content_bp, url_prefix="/api/content")
+    app.register_blueprint(ai_bp, url_prefix="/api/ai")
     app.register_blueprint(comments_bp, url_prefix="/api")
     app.register_blueprint(interactions_bp, url_prefix="/api")
     app.register_blueprint(
