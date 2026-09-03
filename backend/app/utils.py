@@ -13,14 +13,15 @@ def role_required(*allowed_roles):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args,**kwargs):
-            from app.models import user
+            from app.models import User
             user_id=get_jwt_identity()
             user=db.session.get(User, int(user_id))
 
             if not user:
                 return jsonify({"error": "User not found"}), 404
-            if user.role not in allowed_roles:
+            if user.Role not in allowed_roles:
                 return jsonify({"error": "Forbidden. Insufficient permissions."}),403
             return fn(*args,**kwargs)         
         return wrapper
     return decorator    
+
