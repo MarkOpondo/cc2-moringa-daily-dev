@@ -7,7 +7,7 @@ Everything below is ready to copy-paste into GitHub.
 ## 1. PR TITLE
 
 ```
-fix: backend startup crash, profile persistence, post submission, reactions, notifications, admin flow + Instagram-style posting, Render deployment & separate admin login
+fix: backend startup crash, profile persistence, post submission, reactions, notifications, admin flow + Instagram-style posting, Render deployment, separate admin login & timestamp/media/session fixes
 ```
 
 ---
@@ -21,10 +21,13 @@ This PR repairs the backend (which could not start on `main`), fixes every
 reported user-facing bug (profile fields disappearing on reload, post
 submission 500s, dead reactions button, empty notifications, broken admin
 dashboard, subscriptions CORS errors), adds Instagram-style post creation and
-admin sign-up, **separates the admin login from the public login form**, and
-adds **one-click deployment to Render** (`render.yaml` + production config).
+admin sign-up, **separates the admin login from the public login form**, adds
+**one-click deployment to Render** (`render.yaml` + production config), and
+fixes a second wave of reported bugs (**wrong "3 hours ago" timestamps, post
+media not rendering, null-user crashes, random 401s, and DB schema drift
+healing itself at request time**).
 
-Verified with **59 automated backend e2e checks** (`backend/e2e_test.py`)
+Verified with **66 automated backend e2e checks** (`backend/e2e_test.py`)
 and **37 frontend tests** — all passing — plus a live gunicorn/production-mode
 smoke test of the exact Render start command.
 
@@ -47,6 +50,13 @@ smoke test of the exact Render start command.
 - **Misleading CORS errors on 500s**: unhandled exceptions in debug mode escalated to the Werkzeug debugger page, which carries **no CORS headers**
 - Wishlist remove sent the content id where the API expects the wishlist row id; search (`?q=`) was ignored by the content API
 
+### Second wave of user-reported bugs
+- **"3 hours ago" on brand-new posts**: every serializer emitted naive UTC ISO strings (`2026-09-04T10:00:00` with no `Z`), which JavaScript parses as **local** time — in Nairobi (UTC+3) a post made one minute ago rendered as "3 hours ago". All serializers now go through one shared `iso_utc()` helper that appends `Z`, and the content serializer also returns `createdAt` (ContentCard read `item.createdAt` and previously got `undefined`)
+- **Post media not rendering on the detail page**: the API returned *relative* `/static/uploads/...` URLs, which 404 against the frontend's origin (5173 ≠ 5001); image posts additionally had **no `<img>` element at all** (only video/audio had a player). Media URLs are now absolute and images render
+- **"Cannot read properties of null (reading 'id')"**: submitting a post / subscribing to a category / marking notifications read crashed when no user was logged in — all guarded now (submitting redirects to login)
+- **Random 401s on reactions/subscriptions**: a stale or missing token produced scattered 401s. `api.js` now handles 401 globally — clears the dead session, shows "your session expired" on the login page, and returns you where you were after logging back in
+- **DB schema drift 500s (`no such column: content.Summary`)**: the global error handler now detects drift, **runs the repair automatically once**, and answers `503 {schema_repaired: true, retry: true}` — the frontend transparently retries and the user never sees the error
+
 ### Security
 - **Admin accounts could sign in through the public login form** — dangerous. Now:
   - the public `POST /api/auth/login` **rejects Admin accounts (403)** and tells them where to go
@@ -64,7 +74,8 @@ smoke test of the exact Render start command.
   - production hardening: `ProductionConfig` (`DEBUG=False`), `FLASK_ENV` config selection, `postgres://` → `postgresql://` URL normalisation, empty-DB bootstrap at startup, gunicorn added to requirements
   - client no longer hardcodes `http://localhost:5001` — everything reads `VITE_API_BASE_URL` (default localhost for dev), so a deployed frontend just needs that one build-time env var
 - 🥬 **`bash dev.sh`** — one command: installs deps, prepares/migrates/seeds the DB (default admin `admin` / `Admin123!` — **signs in via `/admin/login`**), starts backend (5001) + frontend (5173)
-- 🩺 **`app/schema_doctor.py`** — idempotent schema repair for databases created from old models (adds missing columns, allows `Pending` status, preserves data); runs automatically on dev-server boot and via `backend/setup_db.py`
+- 🩺 **`app/schema_doctor.py`** — idempotent schema repair for databases created from old models (adds missing columns, allows `Pending` status, preserves data); runs automatically on dev-server boot, via `backend/setup_db.py`, **and now at request time** (drift-triggered auto-repair + transparent client retry)
+- 🏷️ **Moderation clarity**: the create-post response explains *why* a post was published instantly vs sent to review (admins/tech writers publish by design — learners' posts go to Pending); the success screen shows that reason. Optional `MODERATE_ALL_POSTS=1` env var forces *everyone* (including admins) through review while testing
 - 🔔 Subscriber notifications fire when content is published (immediately for admin/tech_writer, or when an admin approves a pending post)
 - Global JSON error handler keeps CORS headers on every error and returns an actionable "schema is out of date — run bash dev.sh" hint when drift is detected
 
@@ -80,7 +91,7 @@ bash dev.sh                                  # runs the whole stack
 # learner login: sign up normally
 # admin login:  http://localhost:5173/admin/login  with admin / Admin123!
 
-cd backend && .venv/bin/python e2e_test.py   # 59 automated checks
+cd backend && .venv/bin/python e2e_test.py   # 66 automated checks
 cd ../client && npx jest                     # 37 frontend tests
 ```
 
@@ -92,7 +103,9 @@ Manual smoke test:
 5. Heart a post from the feed and from the detail page → count updates, click again to unlike
 6. As a learner, post something → it's "Pending"; as admin, approve it from `/admin` → the author gets a notification
 7. Notifications page → list loads, "mark all as read" works
-8. Deploy: Render dashboard → New → Blueprint → Apply (see `DEPLOYMENT.md`)
+8. **Post as admin → success screen says "published immediately" *and why*; post as learner → "sent for review"**
+9. **Open a post with an image → the image renders on the detail page; timestamps say "just now" for fresh posts (not "3 hours ago" in UTC+3)**
+10. Deploy: Render dashboard → New → Blueprint → Apply (see `DEPLOYMENT.md`)
 
 ## Notes for reviewers
 
@@ -106,12 +119,12 @@ Manual smoke test:
 
 ## 3. COMMIT MESSAGE
 
-The branch has **6 commits** (see `git log main..fix/all-bugfixes`). If you merge
+The branch has **8 commits** (see `git log main..fix/all-bugfixes`). If you merge
 with **"Squash and merge"** (recommended), GitHub will ask for one commit
 message — use this:
 
 ```
-fix: repair backend startup, profile persistence, post submission, reactions, notifications, admin flow + Instagram-style posting, Render deployment & separate admin login
+fix: repair backend startup, profile persistence, post submission, reactions, notifications, admin flow + Instagram-style posting, Render deployment, separate admin login & timestamp/media/session fixes
 
 Backend could not start on main: phantom auth/users imports, unregistered
 auth/admin blueprints, wrong-case Routes/ folder, and `from app import db`
@@ -135,7 +148,9 @@ ImportErrors. Beyond startup:
   rewritten against real routes
 - Subscriptions: registered at /api/subscriptions (was 404 -> CORS error)
 - Errors: global JSON handler keeps CORS headers on 500s; schema drift
-  returns an actionable hint
+  triggers an automatic in-place repair at REQUEST time (once) + a 503
+  the frontend transparently retries — 'no such column' 500s heal
+  themselves instead of persisting
 - DB: app/schema_doctor.py repairs old local databases idempotently,
   bootstraps empty ones at startup, auto-runs on dev-server boot;
   dev.sh one-command stack; setup_db.py
@@ -146,8 +161,20 @@ ImportErrors. Beyond startup:
   DEPLOYMENT.md guide
 - Frontend: account-type picker on signup (Learner / Tech Writer / Admin),
   case-insensitive RoleRoute, wishlist remove uses the row id
+- Timestamps: shared iso_utc() helper — every API timestamp is UTC-aware
+  (Z suffix) so relative times are right in every timezone (fixes '3 hours
+  ago' for fresh posts in UTC+3); createdAt/mediaUrl camelCase aliases
+- Media: absolute URLs in the content serializer (relative /static/uploads/
+  paths 404'd on the frontend origin) + <img> rendering for image posts on
+  the detail page
+- Sessions: global 401 handling in api.js clears stale tokens and redirects
+  to /login (with a 'session expired' notice and a return trip); null-user
+  guards on post submit, category subscribe, and mark-all-notifications
+- Moderation: create response explains published-immediately vs review
+  (admins/tech_writers publish by design); MODERATE_ALL_POSTS=1 forces
+  everyone through review while testing
 
-Verified: 59 backend e2e checks + 37 frontend tests, all passing, plus a
+Verified: 66 backend e2e checks + 37 frontend tests, all passing, plus a
 gunicorn production-mode smoke test of the exact Render start command.
 ```
 
