@@ -31,7 +31,6 @@ def _notify_subscribers(content_item):
                 notifications.append(
                     Notification(
                         UserID=sub.UserID,
-                        UserID=sub.UserID,
                         ContentID=content_item.ContentID,
                         Message=f"New content in your feed: '{content_item.Title}'",
                     )
