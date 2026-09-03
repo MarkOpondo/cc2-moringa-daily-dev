@@ -257,25 +257,30 @@ def change_password():
 
     db.session.commit()
     return jsonify({"message": "Password updated successfully."}), 200
-
 # ==========================================
 # PROFILE ENDPOINTS
 # ==========================================
 
-# 1. CORS Preflight Handler (Handles all OPTIONS requests automatically)
 @auth_profile_bp.before_request
 def handle_options():
     if request.method == "OPTIONS":
         return "", 200
 
 
-# 2. Get User Profile
 @auth_profile_bp.get("/me")
 @auth_profile_bp.get("/profiles/me")
 @auth_profile_bp.get("/auth/me")
 @jwt_required()
 def get_my_profile():
-    current_user_id = safe_get_user_id()
+    try:
+        current_user_id = safe_get_user_id()
+    except Exception:
+        # Fallback if safe_get_user_id fails
+        current_user_id = get_jwt_identity()
+
+    # Handle string identities if JWT stored string ID
+    if isinstance(current_user_id, str) and current_user_id.isdigit():
+        current_user_id = int(current_user_id)
 
     user = db.session.get(User, current_user_id)
     if not user:
@@ -303,32 +308,47 @@ def get_my_profile():
         for p in user_posts
     ]
 
-    role = getattr(user, "Role", "user")
-    is_admin = getattr(user, "is_admin", False) or (role.lower() == "admin")
+    role = getattr(user, "Role", getattr(user, "role", "user"))
+    is_admin = getattr(user, "is_admin", False) or (str(role).lower() == "admin")
+    username = getattr(user, "Username", getattr(user, "username", ""))
+    email = getattr(user, "Email", getattr(user, "email", ""))
 
-    return (
-        jsonify({
-            "user": {
-                "id": user.UserID,
-                "user_id": user.UserID,
-                "username": user.Username,
-                "email": user.Email,
-                "role": role,
-                "is_admin": is_admin,
-            },
-            "profile": {
-                "profile_id": profile.ProfileID,
-                "bio": profile.Bio or "",
-                "interests": profile.Interests or "",
-                "profile_image": profile.ProfileImage or "",
-                "posts_count": len(user_posts),
-                "posts": posts_data,
-            },
-        }),
-        200,
-    )
+    # Provides all root-level and nested variations React components might look for
+    return jsonify({
+        "id": user.UserID,
+        "user_id": user.UserID,
+        "username": username,
+        "email": email,
+        "role": role,
+        "is_admin": is_admin,
+        "bio": profile.Bio or "",
+        "interests": profile.Interests or "",
+        "profile_image": profile.ProfileImage or "",
+        "posts_count": len(user_posts),
+        "posts": posts_data,
+        "user": {
+            "id": user.UserID,
+            "user_id": user.UserID,
+            "username": username,
+            "email": email,
+            "role": role,
+            "is_admin": is_admin,
+        },
+        "profile": {
+            "profile_id": profile.ProfileID,
+            "bio": profile.Bio or "",
+            "interests": profile.Interests or "",
+            "profile_image": profile.ProfileImage or "",
+            "posts_count": len(user_posts),
+            "posts": posts_data,
+        }
+    }), 200
 
 # app/routes/auth_profile.py
+
+#===========================================
+#UPDATE PROFILE
+#===========================================
 
 @auth_profile_bp.route("/profiles/me", methods=["PUT", "POST", "PATCH", "OPTIONS"])
 @auth_profile_bp.route("/auth/me", methods=["PUT", "POST", "PATCH", "OPTIONS"])
@@ -362,14 +382,27 @@ def update_profile():
 
     data = request.get_json(silent=True) or {}
 
+    # --- UPDATED FIELD ASSIGNMENTS ---
     profile.Bio = data.get("bio", profile.Bio)
     profile.Interests = data.get("interests", profile.Interests)
 
+    # Add Skills (supports both camelCase and snake_case)
+    if "skills" in data or "tech_stack" in data:
+        profile.Skills = data.get("skills") or data.get("tech_stack")
+
+    # Add GitHub profile
+    if "github_profile" in data or "github" in data or "githubUrl" in data:
+        profile.GithubProfile = (
+            data.get("github_profile") or data.get("github") or data.get("githubUrl")
+        )
+
+    # Add Profile Image
     if "profile_image" in data or "profileImage" in data:
         profile.ProfileImage = data.get("profile_image") or data.get("profileImage")
 
     db.session.commit()
 
+    # --- UPDATED JSON RESPONSE ---
     return jsonify({
         "message": "Profile updated successfully.",
         "profile": {
@@ -377,10 +410,11 @@ def update_profile():
             "user_id": profile.UserID,
             "bio": profile.Bio or "",
             "interests": profile.Interests or "",
+            "skills": getattr(profile, "Skills", "") or "",
+            "github_profile": getattr(profile, "GithubProfile", "") or "",
             "profile_image": profile.ProfileImage or "",
         }
     }), 200
-
 
 # ==========================================
 # 1. Blueprint-Level CORS Preflight Handler
