@@ -178,55 +178,16 @@ def fix_content_status_constraint(engine):
 
         return False
 
-    # PostgreSQL: inspect the actual check constraints instead of assuming
-    # a particular constraint name.
+    # Postgres & friends: swap the constraint directly (best effort)
     try:
-        with engine.connect() as conn:
-            rows = conn.execute(
-                text(
-                    "SELECT conname, pg_get_constraintdef(oid) AS def "
-                    "FROM pg_constraint "
-                    "WHERE conrelid = 'content'::regclass "
-                    "AND contype = 'c'"
-                )
-            ).fetchall()
-
-        status_constraints = [
-            (name, definition)
-            for name, definition in rows
-            if '"Status"' in definition
-            or "status" in definition.lower()
-        ]
-
-        # If there are no status constraints, there is nothing to repair.
-        if not status_constraints:
-            return False
-
-        needs_fix = any(
-            "Pending" not in definition
-            for _, definition in status_constraints
-        )
-
-        if not needs_fix:
-            return False
-
         with engine.begin() as conn:
-            for name, _ in status_constraints:
-                conn.execute(
-                    text(
-                        f'ALTER TABLE content '
-                        f'DROP CONSTRAINT "{name}"'
-                    )
-                )
-
-            conn.execute(
-                text(
-                    "ALTER TABLE content "
-                    "ADD CONSTRAINT check_valid_content_status "
-                    f"CHECK ({PENDING_STATUS_CONSTRAINT})"
-                )
-            )
-
+            conn.execute(text(
+                "ALTER TABLE content DROP CONSTRAINT IF EXISTS check_valid_content_status"
+            ))
+            conn.execute(text(
+                f"ALTER TABLE content ADD CONSTRAINT check_valid_content_status "
+                f"CHECK ({PENDING_STATUS_CONSTRAINT})"
+            ))
         return True
 
     except Exception as exc:
@@ -260,34 +221,10 @@ def repair_schema(engine, verbose=True):
 
 
 def check_and_repair(app, verbose=True):
-    """Entry point used at app start.
-
-    - Empty database -> create all tables + stamp migration head.
-    - Existing database -> repair schema drift idempotently.
-    """
-
+    """Entry point used at app start: quietly repair drift if detected."""
     with app.app_context():
         engine = db.engine
 
         if database_is_empty(engine):
-            db.create_all()
-
-            try:
-                from flask_migrate import stamp
-
-                stamp(revision="head")
-
-            except Exception:
-                pass
-
-            if verbose:
-                print(
-                    "ℹ empty database — tables created at startup"
-                )
-
-            return False
-
-        return repair_schema(
-            engine,
-            verbose=verbose
-        )
+            return False  # nothing to repair yet (fresh DB, create_all handles it)
+        return repair_schema(engine, verbose=verbose)

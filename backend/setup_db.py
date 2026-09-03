@@ -45,7 +45,10 @@ def _table_names(engine):
 
 
 def main():
-    app = create_app("development")
+    # FLASK_ENV=production on Render; defaults to development locally
+    import os
+    config_name = os.environ.get("FLASK_ENV", "development")
+    app = create_app(config_name)
 
     with app.app_context():
         engine = db.engine
