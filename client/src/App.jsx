@@ -18,6 +18,7 @@ import Categories from './pages/Categories';
 import Notifications from './pages/Notifications';
 import Wishlist from './pages/Wishlist';
 import AdminDashboard from './pages/AdminDashboard';
+import AiGenerator from './components/AiGenerator';
 
 import { hydrateFromStorage } from './features/auth/authSlice';
 
@@ -64,6 +65,9 @@ export default function App() {
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+
+      {/* Floating AI Widget */}
+      <AiGenerator />
     </BrowserRouter>
   );
 }
