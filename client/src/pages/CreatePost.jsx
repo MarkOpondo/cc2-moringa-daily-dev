@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Send, Upload, Image as ImageIcon, Leaf } from 'lucide-react';
 
-// Use environment variable for API base URL with a local fallback
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
 
 export default function CreatePost() {
@@ -24,6 +23,19 @@ export default function CreatePost() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const navigate = useNavigate();
 
+  // Listen for AI Content Insertion Events
+  useEffect(() => {
+    const handleAiInsert = (e) => {
+      const textToInsert = e.detail;
+      if (!textToInsert) return;
+
+      setDescription((prev) => (prev ? `${prev}\n\n${textToInsert}` : textToInsert));
+    };
+
+    window.addEventListener('ai-insert-content', handleAiInsert);
+    return () => window.removeEventListener('ai-insert-content', handleAiInsert);
+  }, []);
+
   // Helper to retrieve auth token
   const getAuthToken = () => {
     let token = localStorage.getItem('token') || localStorage.getItem('access_token');
@@ -37,7 +49,7 @@ export default function CreatePost() {
           if (sessionData && sessionData.access_token) {
             return sessionData.access_token;
           }
-        } catch (err) {
+        } catch {
           // Ignore JSON parse errors
         }
       }
