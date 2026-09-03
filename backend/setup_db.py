@@ -1,24 +1,25 @@
-"""Safe database setup — works for fresh clones AND existing databases.
+"""Safe database setup & repair — works for fresh clones AND old databases.
 
-- Fresh / missing DB        -> creates all tables from the models, then
-                              stamps alembic to the latest migration head.
-- Existing DB, alembic run  -> applies any pending migrations.
-- Existing DB, never stamped (created with db.create_all before)
-                             -> stamps head first, then upgrades.
+Databases created from the previous models are missing columns the code now
+uses (content.Summary / Duration / LikesCount / RejectionReason, users.is_admin)
+and their `content` status check-constraint doesn't allow 'Pending', which made
+every new learner post fail with a 500. Plain `flask db upgrade` can't fix an
+unstamped (create_all-created) database, so this script repairs the schema
+directly (see app/schema_doctor.py).
 
-Also seeds default categories + an admin account the very first time
-(only when the users table is completely empty), so you can log in
-immediately instead of hunting for credentials.
+Everything is idempotent — run it as many times as you like. Existing data is
+preserved. On first run with an empty database it also seeds default categories
+and an admin account.
 
 Run from the backend/ folder:  python setup_db.py
 """
-import os
-
 from flask_migrate import stamp, upgrade
 
 from app import create_app
 from app.extensions import db
 from app.models import Category, Profile, User
+from app.schema_doctor import repair_schema
+from sqlalchemy import text
 
 DEFAULT_CATEGORIES = [
     "Software Engineering",
@@ -38,39 +39,42 @@ ADMIN_EMAIL = "admin@moringa.com"
 ADMIN_PASSWORD = "Admin123!"
 
 
-def database_is_empty(app):
-    with app.app_context():
-        inspector = db.inspect(db.engine)
-        return len(inspector.get_table_names()) == 0
-
-
-def has_alembic_version(app):
-    with app.app_context():
-        inspector = db.inspect(db.engine)
-        return "alembic_version" in inspector.get_table_names()
+def _table_names(engine):
+    from app.schema_doctor import _table_names as _names
+    return _names(engine)
 
 
 def main():
-    app = create_app("development")
+    # FLASK_ENV=production on Render; defaults to development locally
+    import os
+    config_name = os.environ.get("FLASK_ENV", "development")
+    app = create_app(config_name)
 
-    if database_is_empty(app):
-        print("→ No database found — creating tables from models…")
-        with app.app_context():
+    with app.app_context():
+        engine = db.engine
+
+        if len(_table_names(engine)) == 0:
+            print("→ No database found — creating tables from models…")
             db.create_all()
             stamp(revision="head")
-        print("✓ Database created and stamped at the latest migration.")
-    elif not has_alembic_version(app):
-        print("→ Database exists but was never migrated — stamping head…")
-        with app.app_context():
+            print("✓ Database created and stamped at the latest migration.")
+        else:
+            if "alembic_version" in _table_names(engine):
+                print("→ Existing database — applying pending migrations…")
+                try:
+                    upgrade()
+                    print("✓ Migrations up to date.")
+                except Exception as exc:
+                    print(f"⚠ migration step failed ({exc}) — "
+                          "falling back to schema repair…")
+            else:
+                print("→ Existing database (no migration history) — "
+                      "repairing schema directly…")
+
+            print("→ Repairing schema (idempotent)…")
+            repair_schema(engine)
+
             stamp(revision="head")
-        print("✓ Stamped. Applying any pending migrations…")
-        with app.app_context():
-            upgrade()
-    else:
-        print("→ Existing database — applying pending migrations…")
-        with app.app_context():
-            upgrade()
-        print("✓ Migrations up to date.")
 
     # ---- First-run seed: categories + admin ----
     with app.app_context():

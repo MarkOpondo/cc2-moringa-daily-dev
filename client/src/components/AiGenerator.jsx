@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import AiAvatar from "./AiAvatar";
+import { API_BASE_URL } from "../services/api";
 
 export default function AiGenerator() {
   const location = useLocation();
@@ -124,7 +125,7 @@ export default function AiGenerator() {
     try {
       const recentHistory = updatedMessages.slice(-6);
 
-      const response = await fetch("http://localhost:5001/api/ai/generate", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

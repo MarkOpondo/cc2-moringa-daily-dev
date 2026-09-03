@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required
 
 from app.extensions import db
 from app.models import Content, Notification, Profile, User
-from app.utils import role_required
+from app.utils import iso_utc, role_required
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -35,10 +35,10 @@ def get_pending_content():
             "duration": getattr(item, "Duration", None),
             "status": item.Status,
             "created_at": (
-                item.CreatedAt.isoformat() if item.CreatedAt else None
+                iso_utc(item.CreatedAt)
             ),
             "createdAt": (
-                item.CreatedAt.isoformat() if item.CreatedAt else None
+                iso_utc(item.CreatedAt)
             ),
             "author": (
                 item.author.Username if getattr(item, "author", None) else "Unknown"

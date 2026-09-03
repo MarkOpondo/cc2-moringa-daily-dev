@@ -5,6 +5,7 @@ import { Sparkles, Wand2 } from "lucide-react";
 import { createContent } from "../services/contentApi";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import Button from "../components/ui/Button";
+import { API_BASE_URL } from "../services/api";
 
 const TYPES = [
   { value: "article", label: "Article" },
@@ -54,7 +55,7 @@ export default function CreateContent() {
     const prompt = `Based on title "${form.title}" and text "${form.body}", select the single best category from: [${categoryList}]. Return ONLY the category name.`;
 
     try {
-      const res = await fetch("http://localhost:5001/api/ai/generate", {
+      const res = await fetch(`${API_BASE_URL}/api/ai/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -105,7 +106,7 @@ Content:
 ${form.body}`;
 
     try {
-      const res = await fetch("http://localhost:5001/api/ai/generate", {
+      const res = await fetch(`${API_BASE_URL}/api/ai/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -135,6 +136,12 @@ ${form.body}`;
 
   async function handleSubmit(e) {
     e.preventDefault();
+    // Guard: without a logged-in user there is no authorId — this used to
+    // crash with "Cannot read properties of null (reading 'id')".
+    if (!user?.id) {
+      navigate("/login?next=/create", { replace: true });
+      return;
+    }
     if (!form.title.trim() || !form.body.trim() || !form.categoryId) {
       setError("Title, content, and a category are all required.");
       return;

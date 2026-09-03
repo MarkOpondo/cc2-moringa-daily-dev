@@ -76,6 +76,19 @@ r = client.post("/api/auth/login", json={"username": "ann", "password": "Passw0r
 check("login 200", r.status_code == 200, r.get_json())
 check("login returns is_admin flag", "is_admin" in r.get_json()["user"], r.get_json())
 
+print("\n== 1b. SEPARATE ADMIN LOGIN (public form rejects admins) ==")
+r = client.post("/api/auth/login", json={"username": "adminboss", "password": "Passw0rd!"})
+check("public login rejects admin (403)", r.status_code == 403, r.get_json())
+check("rejection message points to admin login",
+      "admin" in str(r.get_json().get("error", "")).lower(), r.get_json())
+r = client.post("/api/auth/admin/login", json={"username": "adminboss", "password": "Passw0rd!"})
+check("admin login endpoint works (200)", r.status_code == 200, r.get_json())
+check("admin login returns admin role", r.get_json()["user"]["role"] == "Admin", r.get_json())
+r = client.post("/api/auth/admin/login", json={"username": "ann", "password": "Passw0rd!"})
+check("admin login rejects non-admin (403)", r.status_code == 403, r.get_json())
+r = client.post("/api/auth/login", json={"username": "writer", "password": "Passw0rd!"})
+check("tech_writer can still use public login", r.status_code == 200, r.get_json())
+
 print("\n== 2. PROFILE: save skills + github, then reload ==")
 r = client.put("/api/profiles/me", headers=as_user(ANN_TOKEN), json={
     "bio": "Moringa student", "skills": "React, Python, Tailwind",
@@ -115,6 +128,13 @@ r = client.get(f"/api/content/{ANN_POST_ID}")
 check("single content GET 200", r.status_code == 200, r.get_json())
 check("single content has likes_count", "likes_count" in r.get_json(), r.get_json())
 check("single content has author", r.get_json().get("author", {}).get("username") == "ann", r.get_json())
+data = r.get_json()
+check("createdAt camelCase alias present (ContentCard)", "createdAt" in data, list(data.keys()))
+check("created_at is UTC-aware (ends Z) — fixes +3h '3 hours ago' in Nairobi",
+      isinstance(data.get("created_at"), str) and data["created_at"].endswith("Z"), data.get("created_at"))
+check("media url is ABSOLUTE (frontend origin differs from backend)",
+      isinstance(data.get("url"), str) and data["url"].startswith("http"), data.get("url"))
+check("mediaUrl camelCase alias present", "mediaUrl" in data, list(data.keys()))
 
 print("\n== 4. REACTIONS: like / summary / toggle-off ==")
 r = client.post(f"/api/content/{ANN_POST_ID}/reactions",
@@ -191,10 +211,16 @@ r = client.post("/api/content", headers=as_user(WRITER_TOKEN), json={
     "type": "article", "category_id": CAT_ID})
 check("tech_writer post 201", r.status_code == 201, r.get_json())
 check("tech_writer post Published instantly", r.get_json().get("status") == "Published", r.get_json())
+check("writer response explains WHY it published (publish_reason)",
+      bool(r.get_json().get("publish_reason")), r.get_json())
+check("writer response has published_immediately flag",
+      r.get_json().get("published_immediately") is True, r.get_json())
 
 r = client.get("/api/users/me/notifications", headers=as_user(ANN_TOKEN))
 check("subscriber notified of new content", any(
     "New content in your feed" in n["message"] for n in r.get_json()), r.get_json())
+check("notification created_at is UTC-aware (ends Z)",
+      all(str(n.get("created_at", "")).endswith("Z") for n in r.get_json()), r.get_json()[:2])
 
 print("\n== 8. REPORTS + WISHLIST + SEARCH ==")
 r = client.post(f"/api/content/{ANN_POST_ID}/report",
@@ -220,6 +246,44 @@ check("search finds posts", found, r.get_json()["items"][:1])
 
 r = client.get("/api/content", query_string={"status": "pending"})
 check("status filter case-insensitive", r.status_code == 200, None)
+
+print("\n== 9. SUBSCRIPTIONS (was 404 -> CORS preflight failure) ==")
+# Clean slate first: section 7 may have already subscribed ANN to CAT_ID
+client.delete(f"/api/subscriptions/{CAT_ID}", headers=as_user(ANN_TOKEN))
+r = client.post("/api/subscriptions", headers=as_user(ANN_TOKEN),
+                json={"category_id": CAT_ID})
+check("subscribe 201", r.status_code == 201, r.get_json())
+r = client.get("/api/subscriptions", headers=as_user(ANN_TOKEN))
+subs = r.get_json()
+check("list subscriptions 200", r.status_code == 200 and isinstance(subs, list), subs)
+check("subscription includes category_id", subs and subs[0].get("category_id") == CAT_ID, subs)
+r = client.delete(f"/api/subscriptions/{CAT_ID}", headers=as_user(ANN_TOKEN))
+check("unsubscribe 200", r.status_code == 200, r.get_json())
+
+# CORS preflight: the browser sends OPTIONS before cross-origin requests
+r = client.options("/api/subscriptions", headers={
+    "Origin": "http://localhost:5173",
+    "Access-Control-Request-Method": "GET",
+    "Access-Control-Request-Headers": "authorization,content-type",
+})
+check("OPTIONS /api/subscriptions preflight 200", r.status_code == 200, r.status_code)
+check("preflight has ACAO header",
+      r.headers.get("Access-Control-Allow-Origin") in ("*", "http://localhost:5173"),
+      dict(r.headers))
+r = client.options("/api/content", headers={
+    "Origin": "http://localhost:5173",
+    "Access-Control-Request-Method": "POST",
+    "Access-Control-Request-Headers": "authorization,content-type",
+})
+check("OPTIONS /api/content preflight 200", r.status_code == 200, r.status_code)
+
+# Unhandled errors must stay JSON (so CORS headers survive) — simulate drift
+from app import create_app as _caf
+with app.test_request_context():
+    pass
+r = client.get("/api/content/999999999")
+check("GET missing content is JSON 404 (not werkzeug page)",
+      r.status_code == 404 and r.is_json, r.status_code)
 
 print("\n" + "=" * 60)
 print(f"RESULT: {len(PASSED)} passed, {len(FAILED)} failed")
