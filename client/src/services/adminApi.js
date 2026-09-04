@@ -1,59 +1,42 @@
-import api from "./api";
+import apiRequest from "./api";
 
-// GET /api/users
 export async function listUsers() {
-  const response = await api.get("/users");
-  return response.data;
+  return apiRequest("/api/admin/users");
 }
 
-// POST /api/users
-export async function addUser({ username, email, role }) {
-  const response = await api.post("/users", {
-    username,
-    email,
-    role,
+export async function addUser({ username, email, password, role }) {
+  return apiRequest("/api/admin/users", {
+    method: "POST",
+    body: JSON.stringify({ username, email, password, role }),
   });
-
-  return response.data;
 }
 
-// PATCH /api/users/:id/deactivate
 export async function toggleUserActive(id) {
-  const response = await api.patch(`/users/${id}/deactivate`);
-  return response.data;
+  return apiRequest(`/api/admin/users/${id}/status`, { method: "PATCH" });
 }
 
-// GET /api/content?status=pending
 export async function listPendingContent() {
-  const response = await api.get("/content", {
-    params: {
-      status: "pending",
-    },
-  });
-
-  return response.data;
+  return apiRequest("/api/admin/content?status=draft");
 }
 
-// GET /api/reports
+export async function updateContentStatus(id, status, reason) {
+  return apiRequest(`/api/admin/content/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, reason }),
+  });
+}
+
 export async function listReports() {
-  const response = await api.get("/reports");
-  return response.data;
+  return apiRequest("/api/admin/reports");
 }
 
-// PATCH /api/reports/:id
-export async function resolveReport(id, status = "resolved") {
-  const response = await api.patch(`/reports/${id}`, {
-    status,
-  });
-
-  return response.data;
+export async function resolveReport(id) {
+  return apiRequest(`/api/admin/reports/${id}`, { method: "PATCH" });
 }
 
-// POST /api/content/:id/report
 export async function reportContent(contentId, reason) {
-  const response = await api.post(`/content/${contentId}/report`, {
-    reason,
+  return apiRequest(`/api/content/${contentId}/report`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
   });
-
-  return response.data;
 }

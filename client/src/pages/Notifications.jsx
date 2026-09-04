@@ -14,7 +14,7 @@ export default function Notifications() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (user?.id) dispatch(fetchNotifications(user.id));
+    if (user?.id) dispatch(fetchNotifications());
   }, [dispatch, user?.id]);
 
   const unreadCount = items.filter((n) => !n.isRead).length;

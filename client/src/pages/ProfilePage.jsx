@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { logout as logoutRequest } from '../services/authApi';
+import { logout as clearSession } from '../features/auth/authSlice';
 import { fetchProfile, updateProfile } from '../services/profileApi';
 
 export default function ProfilePage() {
@@ -14,6 +17,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,7 +49,7 @@ export default function ProfilePage() {
       await updateProfile({
         bio: profile.bio,
         skills: profile.skills,
-        github_url: profile.github_url,
+        githubUrl: profile.github_url,
         interests: profile.interests,
       });
       setStatusMsg({ type: 'success', text: 'Profile updated successfully!' });
@@ -55,9 +59,13 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logoutRequest();
+    } finally {
+      dispatch(clearSession());
+      navigate('/login');
+    }
   };
 
   if (isLoading) {

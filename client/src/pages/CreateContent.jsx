@@ -2,17 +2,16 @@ import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { createContent } from "../services/contentApi";
-import { selectCurrentUser } from "../features/auth/authSlice";
 import Button from "../components/ui/Button";
 
 const TYPES = [
   { value: "article", label: "Article" },
   { value: "video", label: "Video" },
   { value: "audio", label: "Audio" },
+  { value: "image", label: "Image" },
 ];
 
 export default function CreateContent() {
-  const user = useSelector(selectCurrentUser);
   const categories = useSelector((state) => state.categories.items);
   const navigate = useNavigate();
 
@@ -37,8 +36,10 @@ export default function CreateContent() {
     setError(null);
     setSubmitting(true);
     try {
-      const created = await createContent({ ...form, authorId: user.id });
+      const created = await createContent(form);
       navigate(`/content/${created.id}`);
+    } catch (requestError) {
+      setError(requestError.message || "Unable to submit this post.");
     } finally {
       setSubmitting(false);
     }

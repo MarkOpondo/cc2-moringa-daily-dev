@@ -1,91 +1,109 @@
-from flask import Blueprint,request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
+
 from app.extensions import db
-from app.models import Comment
+from app.models import Comment, Content, User, normalized_role
+from app.serializers import serialize_comment
 
-comments_bp =Blueprint("comments", __name__)
 
-def _build_comment_tree(comment):
-    """ Recursively serialize a comment and its replies. """
-    return{
-        "id": comment.CommentID,
-        "body": comment.Text,
-        "user_id": comment.UserID,
-        "parent_id": comment.ParentCommentID,
-        "created_at": (comment.CreatedAt.isoformat()
-         if comment.CreatedAt else None),
-        "replies": [_build_comment_tree(reply) for reply in comment.replies]
-    }
+comments_bp = Blueprint("comments", __name__)
 
-#--------------------- GET COMMENTS FROM CONTENT -----
+
+def _current_user():
+    return db.session.get(User, int(get_jwt_identity()))
+
+
+def _comment_payload(comment):
+    return serialize_comment(comment)
+
+
 @comments_bp.get("/content/<int:content_id>/comments")
 def get_comments(content_id):
-    # Fetch only top-level comments: 
-    #replies nest via relationship
-    top_level= Comment.query.filter_by(
-        ContentID= content_id,
-        ParentCommentID=None
-    
-    ).order_by(Comment.CreatedAt.asc()).all()
-    return jsonify([_build_comment_tree(comment) for comment in top_level]),200 
+    content = db.session.get(Content, content_id)
+    if not content:
+        return jsonify({"error": "Content not found"}), 404
 
-#--------------------- CREATE A COMMENT ---------------
+    verify_jwt_in_request(optional=True)
+    identity = get_jwt_identity()
+    viewer = db.session.get(User, int(identity)) if identity is not None else None
+    is_public = content.Status == "Published" and content.IsApproved
+    can_view_private = viewer and (
+        viewer.UserID == content.UserID or normalized_role(viewer.Role) in {"admin", "tech_writer"}
+    )
+    if not is_public and not can_view_private:
+        return jsonify({"error": "Content not found"}), 404
+
+    comments = Comment.query.filter_by(
+        ContentID=content_id, ParentCommentID=None
+    ).order_by(Comment.CreatedAt.asc()).all()
+    return jsonify([_comment_payload(comment) for comment in comments]), 200
+
+
 @comments_bp.post("/content/<int:content_id>/comments")
 @jwt_required()
 def add_comment(content_id):
+    user = _current_user()
+    data = request.get_json(silent=True) or {}
+    body = str(data.get("body") or "").strip()
+    parent_id = data.get("parentId", data.get("parent_comment_id"))
 
-    data = request.get_json()
-
-    if not data or not data.get("body"):
+    content = db.session.get(Content, content_id)
+    if not user or not user.IsActive:
+        return jsonify({"error": "Active user account required"}), 403
+    if not content or content.Status != "Published" or not content.IsApproved:
+        return jsonify({"error": "Published content not found"}), 404
+    if not body:
         return jsonify({"error": "Comment body is required"}), 400
-    
-    new_comment = Comment(
-        Text =data["body"],
+
+    parent = None
+    if parent_id is not None:
+        try:
+            parent = db.session.get(Comment, int(parent_id))
+        except (TypeError, ValueError):
+            parent = None
+        if not parent or parent.ContentID != content_id:
+            return jsonify({"error": "Parent comment not found for this content"}), 400
+
+    comment = Comment(
+        Text=body,
         ContentID=content_id,
-        UserID=int(get_jwt_identity()),
-        ParentCommentID=data.get("parent_comment_id")
-    )   
-
-    db.session.add(new_comment)
+        UserID=user.UserID,
+        ParentCommentID=parent.CommentID if parent else None,
+    )
+    db.session.add(comment)
     db.session.commit()
-    return jsonify({
-        "id": new_comment.CommentID,
-        "message": "Comment added."
-    }),201
+    return jsonify(_comment_payload(comment)), 201
 
-#--------------------- MODIFY A COMMENT -----------
-@comments_bp.put("/comments/<int:comment_id>")
-@jwt_required()  
+
+@comments_bp.patch("/comments/<int:comment_id>")
+@jwt_required()
 def edit_comment(comment_id):
+    comment = db.session.get(Comment, comment_id)
+    user = _current_user()
+    if not comment:
+        return jsonify({"error": "Comment not found"}), 404
+    if not user or (comment.UserID != user.UserID and normalized_role(user.Role) != "admin"):
+        return jsonify({"error": "Forbidden"}), 403
 
-    comment= Comment.query.get_or_404(comment_id)
-
-    if comment.UserID != int(get_jwt_identity()):
-        return jsonify({"error": "You can only edit your own comments"}), 403
-    
-    data = request.get_json()   
-    if not data:
-        return jsonify({
-            "error": "Request body is required"
-        }),400
-
-    comment.Text = data.get("body", comment.Text)
+    data = request.get_json(silent=True) or {}
+    body = str(data.get("body") or "").strip()
+    if not body:
+        return jsonify({"error": "Comment body is required"}), 400
+    comment.Text = body
     db.session.commit()
-    return jsonify({
-        "message": "Comment has been updated successfully"
-    }),200
+    return jsonify(_comment_payload(comment)), 200
 
-#---------------------------- DELETE A COMMENT ----------------
+
 @comments_bp.delete("/comments/<int:comment_id>")
 @jwt_required()
 def delete_comment(comment_id):
-    comment = Comment.query.get_or_404(comment_id)
+    comment = db.session.get(Comment, comment_id)
+    user = _current_user()
+    if not comment:
+        return jsonify({"error": "Comment not found"}), 404
+    if not user or (comment.UserID != user.UserID and normalized_role(user.Role) != "admin"):
+        return jsonify({"error": "Forbidden"}), 403
 
-    if comment.UserID != int(get_jwt_identity()):
-        return jsonify({"error": "You can only delete your own comments."}),403
-    
     db.session.delete(comment)
-    db.session.commit() 
-    return jsonify({"message": "Comment deleted"}), 200     
-
-
+    db.session.commit()
+    return jsonify({"message": "Comment deleted"}), 200

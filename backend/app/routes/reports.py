@@ -1,67 +1,31 @@
-from flask import Blueprint, request,jsonify
-from flask_jwt_extended import jwt_required,get_jwt_identity
-from app.extensions import db
-from app.models import ContentReport
-from app.utils import role_required
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
-reports_bp= Blueprint("reports", __name__)
+from app.extensions import db
+from app.models import Content, ContentReport, User
+
+
+reports_bp = Blueprint("reports", __name__)
+
 
 @reports_bp.post("/content/<int:content_id>/report")
 @jwt_required()
 def report_content(content_id):
-    data = request.get_json()
-    if not data:
-        return jsonify({
-            "error": "Request body is required."
-        }),400
+    user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+    reason = str(data.get("reason") or "").strip()
+    content = db.session.get(Content, content_id)
+    if not content or content.Status != "Published" or not content.IsApproved:
+        return jsonify({"error": "Published content not found"}), 404
     if not reason:
-        return jsonify({
-            "error": "Reason is required"
-        }),400  
+        return jsonify({"error": "Reason is required"}), 400
 
     report = ContentReport(
-        ReportedBy= int(get_jwt_identity()),
+        ReportedBy=user_id,
         ContentID=content_id,
-        Reason= data.get("reason", "No reason provided"),
-        Status="Pending"
+        Reason=reason,
+        Status="Pending",
     )
-
     db.session.add(report)
     db.session.commit()
-    return jsonify({"message": "Report submitted. "}),201
-#------------------------- LIST REPORTS-------------------
-@reports_bp.get("/reports")
-@jwt_required()
-@role_required("admin")
-def list_reports():
-    # default show unresolved. ?resolved=true for all
-    status= request.args.get("status")
-
-    query = ContentReport.query
-    
-    if status:
-        query=query.filter_by(Status=status)
-    reports =query.order_by(
-        ContentReport.CreatedAt.desc()
-    ).all()    
-    
-    return jsonify([{
-        "id": report.ReportID,
-        "content_id": report.ContentID,
-        "user_id": report.ReportedBy,
-        "reason": report.Reason,
-        "status": report.Status
-    }for report in reports]),200
-
-#------------------------------------ Resolve reports-------
-@reports_bp.patch("/reports/<int:report_id>")
-@jwt_required()
-@role_required("admin")
-def resolve_report(report_id):
-
-    report = ContentReport.query.get_or_404(report_id)
-    report.Status="Resolved"
-    
-    db.session.commit()
-    return jsonify({"message": "Report resolved."}),200
-
+    return jsonify({"id": report.ReportID, "status": "pending"}), 201
