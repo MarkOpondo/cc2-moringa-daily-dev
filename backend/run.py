@@ -1,11 +1,14 @@
 import os
 
+# Enable automatic database schema repair when starting the backend.
+# This fixes databases created from older versions of the models.
+os.environ.setdefault("MORINGA_AUTO_REPAIR", "1")
+
 from app import create_app
 
 # FLASK_ENV=production on Render/Heroku-style hosts; defaults to development
 config_name = os.environ.get("FLASK_ENV", "development")
 
-# create_app supports both config_class and config_name
 app = create_app(config_name=config_name)
 
 if __name__ == "__main__":

@@ -151,7 +151,7 @@ export default function ContentDetail() {
   async function handleTopLevelComment(e) {
     e.preventDefault();
     if (!newComment.trim() || !user) return;
-    await addComment(id, user.id, newComment.trim());
+    await addComment(id,newComment.trim());
     setNewComment("");
     const tree = await listComments(id);
     setComments(tree);
@@ -159,7 +159,7 @@ export default function ContentDetail() {
 
   async function handleReply(parentId, body) {
     if (!user) return;
-    await addComment(id, user.id, body, parentId);
+    await addComment(id, body, parentId);
     const tree = await listComments(id);
     setComments(tree);
   }
