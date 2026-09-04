@@ -42,11 +42,14 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
-        {/* Everything below requires a valid login token */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/content/:id" element={<ContentDetail />} />
+        {/* The feed and post pages are readable without an account. Their
+            mutations still use the authenticated API client below. */}
+        <Route element={<AppShell />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/content/:id" element={<ContentDetail />} />
+
+          {/* Everything else requires a valid login token. */}
+          <Route element={<ProtectedRoute />}>
             <Route path="/create" element={<CreateContent />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/notifications" element={<Notifications />} />

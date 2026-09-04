@@ -1,4 +1,5 @@
 import apiRequest from "./api";
+import { getAuthToken } from "./authStorage";
 
 export async function listWishlist() {
   return apiRequest("/api/wishlist", { requiresAuth: true });
@@ -22,7 +23,7 @@ export async function removeFromWishlist(contentId) {
 export async function isWishlisted(contentId) {
   // Public post pages can be opened in the development preview without a
   // login. Do not call the authenticated wishlist endpoint in that case.
-  if (!localStorage.getItem("token")) return false;
+  if (!getAuthToken()) return false;
 
   const items = await listWishlist();
   return items.some((item) => String(item.id) === String(contentId));

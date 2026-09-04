@@ -1,7 +1,8 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import { getAuthToken } from '../services/authStorage';
 
 export default function ProtectedRoute() {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
 
   // Dev-only bypass: without this, the "Preview as" role switcher (which
   // lives inside the pages this route protects) is unreachable whenever

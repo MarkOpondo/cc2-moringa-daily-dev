@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { clearAuthStorage } from "../../services/authStorage";
 
 const storedUser = localStorage.getItem("user");
 
@@ -31,8 +32,7 @@ const authSlice = createSlice({
       state.user = null;
       state.previewRole = null;
 
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      clearAuthStorage();
     },
 
     hydrateFromStorage(state) {

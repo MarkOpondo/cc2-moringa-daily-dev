@@ -1,10 +1,12 @@
 import apiRequest from "./api";
+import { clearAuthStorage, persistAuth } from "./authStorage";
 
 export async function register({ username, email, password }) {
-  return apiRequest("/api/auth/register", {
+  const data = await apiRequest("/api/auth/register", {
     method: "POST",
     body: JSON.stringify({ username, email, password }),
   });
+  return persistAuth(data);
 }
 
 export async function signUpUser(values) {
@@ -16,10 +18,7 @@ export async function login({ identifier, username, password }) {
     method: "POST",
     body: JSON.stringify({ identifier: identifier || username, password }),
   });
-
-  if (data?.token) localStorage.setItem("token", data.token);
-  if (data?.user) localStorage.setItem("user", JSON.stringify(data.user));
-  return data;
+  return persistAuth(data);
 }
 
 export async function loginUser(values) {
@@ -30,8 +29,7 @@ export async function logout() {
   try {
     await apiRequest("/api/auth/logout", { method: "POST" });
   } finally {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuthStorage();
   }
 }
 

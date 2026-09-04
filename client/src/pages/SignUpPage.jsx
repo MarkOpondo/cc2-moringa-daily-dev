@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
+import { setUser } from '../features/auth/authSlice';
 import { signUpUser } from '../services/authApi';
 
 export default function SignUpPage() {
@@ -17,6 +19,7 @@ export default function SignUpPage() {
 
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   // Password Requirements Validation
@@ -60,9 +63,9 @@ export default function SignUpPage() {
     setIsLoading(true);
     try {
       const data = await signUpUser({ username, email, password });
-      localStorage.setItem('token', data.token);
+      if (!data?.token) throw new Error('Sign up did not return an access token.');
       if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+        dispatch(setUser(data.user));
       }
       navigate('/');
     } catch (err) {

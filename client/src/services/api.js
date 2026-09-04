@@ -1,7 +1,9 @@
+import { clearAuthStorage, getAuthToken } from "./authStorage";
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 export async function apiRequest(endpoint, options = {}) {
-  const token = localStorage.getItem("token");
+  const token = getAuthToken();
   const requiresAuth = options.requiresAuth === true;
 
   if (requiresAuth && !token) {
@@ -32,8 +34,7 @@ export async function apiRequest(endpoint, options = {}) {
   }
 
   if (response.status === 401) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuthStorage();
   }
 
   if (!response.ok) {

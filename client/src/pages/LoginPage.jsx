@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
+import { setUser } from '../features/auth/authSlice';
 import { loginUser } from '../services/authApi';
 
 export default function LoginPage() {
@@ -8,6 +10,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -22,13 +25,9 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const data = await loginUser({ username, password });
-      localStorage.setItem('token', data.token);
-      // Once the backend returns user info on login (id, username, role),
-      // this stores it so the rest of the app knows who's logged in.
-      // Safe to keep even before that exists — data.user will just be
-      // undefined and this becomes a no-op until then.
+      if (!data?.token) throw new Error('Login did not return an access token.');
       if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+        dispatch(setUser(data.user));
       }
       navigate('/');
     } catch (err) {
