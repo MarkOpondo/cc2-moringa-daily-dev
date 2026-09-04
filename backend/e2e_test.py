@@ -296,6 +296,17 @@ for path in (DB_PATH, os.path.join("instance", DB_PATH),
     except OSError:
         pass
 
+print("\n" + "=" * 60)
+print(f"RESULT: {len(PASSED)} passed, {len(FAILED)} failed")
+
+# Clean up test artifacts (throwaway DB + uploaded file)
+for path in (DB_PATH, os.path.join("instance", DB_PATH),
+             os.path.join("app", "static", "uploads", "sunset.png")):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
 if FAILED:
     print("Failed checks:", FAILED)
     sys.exit(1)
