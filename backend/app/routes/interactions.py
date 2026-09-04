@@ -1,128 +1,83 @@
-from flask import Blueprint, request,jsonify
-from flask_jwt_extended import jwt_required,get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from app.extensions import db
-from app.models import ContentReaction, Share, Wishlist
+from app.models import Content, Share, User, Wishlist
+from app.serializers import serialize_content
+
 
 interactions_bp = Blueprint("interactions", __name__)
 
-#============================== REACTIONS ===============
-@interactions_bp.post("/content/<int:content_id>/reactions")
-@jwt_required()
-def react_to_content(content_id):
-    data = request.get_json()
-    if not data:
-        return jsonify({
-            "error": "No input data provided"
-        }),400
 
-    reaction_type= data.get("type")
-    
-    if reaction_type not in ("like", "dislike"):
-        return jsonify({"error": "Reaction type must be 'like' or 'dislike'." }),400
-
-    user_id =int(get_jwt_identity())
-
-    existing = ContentReaction.query.filter_by(
-        UserID=user_id,
-        ContentID= content_id
-        ).first()
-
-    if existing: 
-        existing.Reaction = reaction_type
-    else:
-        reaction= ContentReaction(
-            UserID=user_id,
-            ContentID=content_id,
-            Reaction= reaction_type
-        )
-        db.session.add(reaction)
-
-    db.session.commit()
-    return jsonify({"message": "Reaction recorded."}),200
-
-#=================================== SHARE ================
-@interactions_bp.post("/content/<int:content_id>/share")
-@jwt_required()
-def share_content(content_id):
-    data=request.get_json()
-
-    if not data:
-        return jsonify({
-            "error":"No input data provided."
-        }),400
-
-    shared_with_user_id =data.get("shared_with_user_id")
-
-    if not shared_with_user_id:
-        return jsonify({
-            "error": "shared_with_user_id is required."}),400
-    
-    share = Share(
-        UserID=int(get_jwt_identity()),
-        ContentID=content_id,
-        SharedWithUserID= shared_with_user_id
-    )       
-    db.session.add(share)    
-    db.session.commit()
-
-    return jsonify({"message": "Share recorded."}),200
-
-#=================================== WISHLIST ===============
-@interactions_bp.get("/users/me/wishlist")
+@interactions_bp.get("/wishlist")
 @jwt_required()
 def get_wishlist():
-    user_id=int(get_jwt_identity())
+    items = (
+        Wishlist.query.join(Content)
+        .filter(
+            Wishlist.UserID == int(get_jwt_identity()),
+            Content.Status == "Published",
+            Content.IsApproved.is_(True),
+        )
+        .all()
+    )
+    return jsonify([serialize_content(item.content, include_private=False) for item in items]), 200
 
-    items= Wishlist.query.filter_by(UserID=user_id).all()
-    
-    return jsonify([{
-        "id": wishlist.WishlistID,
-        "content_id": wishlist.ContentID
-    } for wishlist in items]),200
 
 @interactions_bp.post("/wishlist")
 @jwt_required()
 def add_to_wishlist():
-
-    data = request.get_json()
-
-    if not data:
-        return jsonify({
-            "error": "No input data provided"
-        }),400
-
-    content_id = data.get("content_id")
-
+    data = request.get_json(silent=True) or {}
+    content_id = data.get("contentId", data.get("content_id"))
     if not content_id:
-        return jsonify({"error": "content_id is required"}),400
-    
-    user_id = int(get_jwt_identity())
+        return jsonify({"error": "contentId is required"}), 400
+    content = db.session.get(Content, content_id)
+    if not content or content.Status != "Published" or not content.IsApproved:
+        return jsonify({"error": "Published content not found"}), 404
 
-    # Prevent duplicates
     existing = Wishlist.query.filter_by(
-        UserID=user_id, ContentID=content_id
+        UserID=int(get_jwt_identity()), ContentID=content_id
     ).first()
-
     if existing:
-        return jsonify({"error": "Already in wishlist."}), 409
-    wishlist = Wishlist(
-        UserID = user_id,
-        ContentID = content_id
-    )    
-    db.session.add(wishlist)
+        return jsonify({"error": "Already in wishlist"}), 409
+
+    item = Wishlist(UserID=int(get_jwt_identity()), ContentID=content_id)
+    db.session.add(item)
     db.session.commit()
-    return jsonify({"message": "Added to wishlist."}),201
+    return jsonify({"id": item.WishlistID, "contentId": item.ContentID}), 201
+
 
 @interactions_bp.delete("/wishlist/<int:content_id>")
 @jwt_required()
-def remove_from_wishlist(wishlist_id):
-    wishlist= Wishlist.query.get_or_404(wishlist_id)
+def remove_from_wishlist(content_id):
+    item = Wishlist.query.filter_by(
+        ContentID=content_id, UserID=int(get_jwt_identity())
+    ).first()
+    if not item:
+        return jsonify({"error": "Wishlist item not found"}), 404
 
-    if wishlist.UserID != int(get_jwt_identity()):
-        return jsonify({"error": "Forbidden"}),403
-
-    db.session.delete(wishlist)
+    db.session.delete(item)
     db.session.commit()
-    return jsonify({"message": "Removed from wishlist."}), 200            
+    return jsonify({"message": "Removed from wishlist"}), 200
 
 
+@interactions_bp.post("/content/<int:content_id>/share")
+@jwt_required()
+def share_content(content_id):
+    data = request.get_json(silent=True) or {}
+    recipient_id = data.get("sharedWithUserId", data.get("shared_with_user_id"))
+    content = db.session.get(Content, content_id)
+    recipient = db.session.get(User, recipient_id) if recipient_id else None
+    if not content or content.Status != "Published" or not content.IsApproved:
+        return jsonify({"error": "Published content not found"}), 404
+    if not recipient or not recipient.IsActive:
+        return jsonify({"error": "Active recipient not found"}), 404
+
+    share = Share(
+        UserID=int(get_jwt_identity()),
+        ContentID=content_id,
+        SharedWithUserID=recipient.UserID,
+    )
+    db.session.add(share)
+    db.session.commit()
+    return jsonify({"id": share.ShareID, "message": "Content shared"}), 201

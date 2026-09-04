@@ -1,279 +1,151 @@
+from flask import Blueprint, current_app, jsonify, request
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from sqlalchemy.exc import IntegrityError
 
-from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import create_access_token
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-
-from app.extensions import db
-from app.models import User, Profile
 from app.email_service import send_password_reset_email
+from app.extensions import db
+from app.models import Profile, User
+from app.serializers import serialize_user
 
 
 auth_bp = Blueprint("auth", __name__)
 
 
-
-# PASSWORD RESET TOKEN HELPERS
-
-
 def generate_reset_token(email):
-    serializer = URLSafeTimedSerializer(
-        current_app.config["SECRET_KEY"]
-    )
-
-    return serializer.dumps(
-        email,
-        salt="password-reset"
-    )
+    serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    return serializer.dumps(email, salt="password-reset")
 
 
 def verify_reset_token(token):
-    serializer = URLSafeTimedSerializer(
-        current_app.config["SECRET_KEY"]
-    )
-
+    serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
     try:
         return serializer.loads(
             token,
             salt="password-reset",
-            max_age=current_app.config["PASSWORD_RESET_TOKEN_MAX_AGE"]
+            max_age=current_app.config["PASSWORD_RESET_TOKEN_MAX_AGE"],
         )
-
     except (SignatureExpired, BadSignature):
         return None
 
 
-
-# REGISTER
+def _token_response(user):
+    return {
+        "token": create_access_token(identity=str(user.UserID)),
+        "user": serialize_user(user),
+    }
 
 
 @auth_bp.post("/register")
 def register():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+    username = str(data.get("username") or "").strip()
+    email = str(data.get("email") or "").strip().lower()
+    password = data.get("password", "")
 
-    if not data:
-        return jsonify({
-            "error": "No input data provided."
-        }), 400
-
-    username = data.get("username")
-    email = data.get("email")
-    password = data.get("password")
-
-    if not all([username, email, password]):
-        return jsonify({
-            "error": "username, email, password are required"
-        }), 400
+    if not username or not email or not password:
+        return jsonify({"error": "username, email, and password are required"}), 400
+    if not isinstance(password, str) or len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
+    if "@" not in email:
+        return jsonify({"error": "A valid email address is required"}), 400
+    if len(username) > 150 or len(email) > 200:
+        return jsonify({"error": "Username or email is too long"}), 400
 
     existing = User.query.filter(
-        (User.Username == username) |
-        (User.Email == email)
+        (User.Username == username) | (User.Email == email)
     ).first()
-
     if existing:
-        return jsonify({
-            "error": "Username or email already exists."
-        }), 400
+        return jsonify({"error": "Username or email already exists"}), 409
 
-    new_user = User(
-        Username=username,
-        Email=email,
-        Role="user",
-        IsActive=True
-    )
-
-    new_user.password_hash = password
-
-    db.session.add(new_user)
+    user = User(Username=username, Email=email, Role="user", IsActive=True)
+    user.password_hash = password
+    db.session.add(user)
     db.session.flush()
+    db.session.add(Profile(UserID=user.UserID))
 
-    new_profile = Profile(
-        UserID=new_user.UserID
-    )
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "Username or email already exists"}), 409
 
-    db.session.add(new_profile)
-    db.session.commit()
-
-    return jsonify({
-        "message": "User created successfully.",
-        "user_id": new_user.UserID
-    }), 201
-
-
-
-# LOGIN
+    return jsonify({"message": "User created successfully", **_token_response(user)}), 201
 
 
 @auth_bp.post("/login")
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+    identifier = str(data.get("identifier") or data.get("username") or data.get("email") or "").strip()
+    password = data.get("password", "")
 
-    if not data:
-        return jsonify({
-            "error": "No input data provided."
-        }), 400
+    if not identifier or not password:
+        return jsonify({"error": "Identifier and password are required"}), 400
 
-    username = data.get("username")
-    password = data.get("password")
-
-    if not username or not password:
-        return jsonify({
-            "error": "Username and password are required"
-        }), 400
-
-    user = User.query.filter_by(
-        Username=username
+    user = User.query.filter(
+        (User.Email == identifier.lower()) | (User.Username == identifier)
     ).first()
-
     if not user or not user.authenticate(password):
-        return jsonify({
-            "error": "Invalid Username or password"
-        }), 401
-
+        return jsonify({"error": "Invalid username/email or password"}), 401
     if not user.IsActive:
-        return jsonify({
-            "error": "Account is inactive. Contact the admin"
-        }), 403
+        return jsonify({"error": "Account is inactive"}), 403
 
-    access_token = create_access_token(
-        identity=str(user.UserID)
-    )
-
-    return jsonify({
-        "token": access_token,
-        "user": {
-            "id": user.UserID,
-            "username": user.Username,
-            "email": user.Email,
-            "role": user.Role
-        },
-        "message": "Login successful"
-    }), 200
+    return jsonify({"message": "Login successful", **_token_response(user)}), 200
 
 
-
-# LOGOUT
+@auth_bp.get("/me")
+@jwt_required()
+def get_current_user():
+    user = db.session.get(User, int(get_jwt_identity()))
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify(serialize_user(user)), 200
 
 
 @auth_bp.post("/logout")
 def logout():
-    return jsonify({
-        "message": "Logout successful."
-    }), 200
-
-
-
-# FORGOT PASSWORD
+    # Access tokens are stateless; the client removes its token on logout.
+    return jsonify({"message": "Logout successful"}), 200
 
 
 @auth_bp.post("/forgot-password")
 def forgot_password():
-    data = request.get_json()
-
-    if not data:
-        return jsonify({
-            "error": "No input data provided."
-        }), 400
-
-    email = data.get("email")
-
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email") or "").strip().lower()
     if not email:
-        return jsonify({
-            "error": "Email is required."
-        }), 400
+        return jsonify({"error": "Email is required"}), 400
 
-    user = User.query.filter_by(
-        Email=email
-    ).first()
+    user = User.query.filter_by(Email=email).first()
+    if user:
+        reset_url = f"{current_app.config['FRONTEND_URL']}/reset-password?token={generate_reset_token(user.Email)}"
+        try:
+            send_password_reset_email(user.Email, reset_url)
+        except Exception:
+            # Do not reveal whether an account exists through an error status.
+            current_app.logger.exception("Failed to send password reset email")
 
-    # Do not reveal whether an email exists in the database.
-    if not user:
-        return jsonify({
-            "message": (
-                "If an account with that email exists, "
-                "password reset instructions have been sent."
-            )
-        }), 200
-
-    token = generate_reset_token(user.Email)
-
-    frontend_url = current_app.config["FRONTEND_URL"]
-
-    reset_url = (
-        f"{frontend_url}/reset-password?token={token}"
-    )
-
-    try:
-        send_password_reset_email(
-            user.Email,
-            reset_url
-        )
-
-    except Exception:
-        current_app.logger.exception(
-            "Failed to send password reset email."
-        )
-
-        return jsonify({
-            "error": "Unable to send password reset email."
-        }), 500
-
-    return jsonify({
-        "message": (
-            "If an account with that email exists, "
-            "password reset instructions have been sent."
-        )
-    }), 200
-
-
-
-# RESET PASSWORD
+    return jsonify(
+        {
+            "message": "If an account with that email exists, password reset instructions have been sent."
+        }
+    ), 200
 
 
 @auth_bp.post("/reset-password")
 def reset_password():
-    data = request.get_json()
-
-    if not data:
-        return jsonify({
-            "error": "No input data provided."
-        }), 400
-
+    data = request.get_json(silent=True) or {}
     token = data.get("token")
-    password = data.get("password")
-
+    password = data.get("password", "")
     if not token or not password:
-        return jsonify({
-            "error": "Token and password are required."
-        }), 400
-
-    if len(password) < 8:
-        return jsonify({
-            "error": "Password must be at least 8 characters."
-        }), 400
+        return jsonify({"error": "Token and password are required"}), 400
+    if not isinstance(password, str) or len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
 
     email = verify_reset_token(token)
-
-    if not email:
-        return jsonify({
-            "error": "Invalid or expired password reset token."
-        }), 400
-
-    user = User.query.filter_by(
-        Email=email
-    ).first()
-
+    user = User.query.filter_by(Email=email).first() if email else None
     if not user:
-        return jsonify({
-            "error": "User not found."
-        }), 404
+        return jsonify({"error": "Invalid or expired password reset token"}), 400
 
     user.password_hash = password
-
     db.session.commit()
-
-    return jsonify({
-        "message": (
-            "Password reset successful. "
-            "You can now log in with your new password."
-        )
-    }), 200
+    return jsonify({"message": "Password reset successful"}), 200

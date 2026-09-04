@@ -19,8 +19,8 @@ export default function AppShell() {
   useEffect(() => {
     dispatch(fetchCategories());
     if (user?.id) {
-      dispatch(fetchSubscriptions(user.id));
-      dispatch(fetchNotifications(user.id));
+      dispatch(fetchSubscriptions());
+      dispatch(fetchNotifications());
     }
   }, [dispatch, user?.id]);
 

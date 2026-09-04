@@ -12,6 +12,7 @@ venv/
 env/
 ENV/
 
+
 # =========================
 # Environment variables
 # =========================
@@ -25,6 +26,7 @@ ENV/
 instance/
 *.sqlite
 *.sqlite3
+*.db
 
 # =========================
 # Flask-Migrate / Alembic
