@@ -1,233 +1,186 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
+from sqlalchemy import or_
+
 from app.extensions import db
-from app.models import Content, User,Category, Subscription, Notification
-from app.utils import role_required
+from app.models import Category, Content, Notification, Subscription, User, normalized_role
+from app.serializers import serialize_content
+
 
 content_bp = Blueprint("content", __name__)
 
-#----------------------------- NOTIFY SUBSCRIBERS-----
+CONTENT_TYPES = {"article": "Article", "video": "Video", "audio": "Audio", "image": "Image"}
+CONTENT_STATUSES = {"draft": "Draft", "published": "Published", "archived": "Archived"}
+
+
+def _current_user():
+    identity = get_jwt_identity()
+    return db.session.get(User, int(identity)) if identity is not None else None
+
+
+def _is_moderator(user):
+    return user and normalized_role(user.Role) in {"admin", "tech_writer"}
+
+
+def _type_value(value):
+    return CONTENT_TYPES.get(str(value or "").strip().lower())
+
+
+def _status_value(value):
+    return CONTENT_STATUSES.get(str(value or "").strip().lower())
+
+
 def _notify_subscribers(content_item):
-    """ Send notifications to users subscribed to this content's category."""
-    notifications=[]
+    recipient_ids = set()
     for category in content_item.categories:
         subscriptions = Subscription.query.filter_by(CategoryID=category.CategoryID).all()
-        for sub in subscriptions:
-            if sub.UserID != content_item.UserID:
-                notifications.append(
-                    Notification(
-                        UserID= sub.UserID,
-                        ContentID=content_item.ContentID,
-                        Message=f"New content in your feed: '{content_item.Title}'"
-                    )
-                )
-      
-    if notifications:
-        db.session.add_all(notifications)
-        db.session.commit()
+        recipient_ids.update(subscription.UserID for subscription in subscriptions)
 
-#-------------------------PUBLIC CONTENT ROUTES ----------
-#------------------------- GET A LIST OF CONTENT----------
+    recipient_ids.discard(content_item.UserID)
+    for user_id in recipient_ids:
+        db.session.add(
+            Notification(
+                UserID=user_id,
+                ContentID=content_item.ContentID,
+                Message=f"New content in your feed: '{content_item.Title}'",
+            )
+        )
+
+
+def _viewer_for_content(item):
+    """Resolve an optional viewer and enforce public/private visibility."""
+    verify_jwt_in_request(optional=True)
+    user = _current_user()
+    is_public = item.Status == "Published" and item.IsApproved
+    can_view_private = user and (user.UserID == item.UserID or _is_moderator(user))
+    return user, is_public or bool(can_view_private)
+
+
 @content_bp.get("")
 def list_content():
-    category_id = request.args.get("category_id", type=int)
-    status = request.args.get("status")
-    content_type = request.args.get("type")
+    category_id = request.args.get("category", type=int)
+    search = request.args.get("search", "").strip()
+    requested_status = request.args.get("status")
 
-    query = Content.query
-
-# Filter by category through the many to many relationship
+    query = Content.query.filter(Content.Status == "Published", Content.IsApproved.is_(True))
+    if requested_status and _status_value(requested_status) != "Published":
+        return jsonify({"error": "Only published content is available in the public feed"}), 400
     if category_id:
-        query = query.filter(Content.categories.any(Category.CategoryID==category_id)
-    )
+        query = query.filter(Content.categories.any(Category.CategoryID == category_id))
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(or_(Content.Title.ilike(pattern), Content.Description.ilike(pattern)))
 
-    if content_type:
-        query = query.filter_by(ContentType= content_type)
+    items = query.order_by(Content.CreatedAt.desc()).all()
+    return jsonify([serialize_content(item, include_private=False) for item in items]), 200
 
-    if status:    
-        query=query.filter_by(Status=status)
 
-    items = query.order_by(Content.CreatedAt.desc()).all() 
-    return jsonify([{
-        "id": content.ContentID,
-        "title": content.Title,
-        "description": content.Description,
-        "type": content.ContentType,
-        "url": content.ContentURL,
-        "status":content.Status,
-        "author_id":content.UserID,
-
-        "category":[
-            {
-                "id": cat.CategoryID,
-                "name": cat.Name
-            } for cat in content.categories
-        ],
-        "created_at": (
-            content.CreatedAt.isoformat() if content.CreatedAt else None 
-        )
-    }for content in items]), 200
-
-#----------------------------------- GET A SPECIFIC CONTENT--------------
 @content_bp.get("/<int:content_id>")
 def get_single_content(content_id):
-    item = Content.query.get_or_404(content_id)
+    item = db.session.get(Content, content_id)
+    if not item:
+        return jsonify({"error": "Content not found"}), 404
 
-    return jsonify({
-        "id": item.ContentID,
-        "title": item.Title,
-        "description": item.Description,
-        "type": item.ContentType,
-        "url": item.ContentURL,
-        "status": item.Status,
-        "author_id": item.UserID,
-        "category_id": [
-            {
-                "id": category.CategoryID,
-                "name": category.Name
-            }
-            for category in item.categories
-        ],
-        "created_at": (
-            item.CreatedAt.isoformat()
-         if item.CreatedAt else None
-        )
-    }), 200
+    user, can_view = _viewer_for_content(item)
+    if not can_view:
+        return jsonify({"error": "Content not found"}), 404
 
-#--------------------------- CREATE CONTENT-----------
+    is_private_view = user and (user.UserID == item.UserID or _is_moderator(user))
+    return jsonify(serialize_content(item, include_private=bool(is_private_view))), 200
+
+
 @content_bp.post("")
 @jwt_required()
-@role_required("tech_writer", "user")
 def create_content():
-    data = request.get_json()
+    user = _current_user()
+    if not user or not user.IsActive:
+        return jsonify({"error": "Active user account required"}), 403
 
-    if not data:
-        return jsonify({
-            "error": "No input data provided"
-        }),400
+    data = request.get_json(silent=True) or {}
+    title = str(data.get("title") or "").strip()
+    body = str(data.get("body", data.get("description")) or "").strip()
+    content_type = _type_value(data.get("type", data.get("content_type")))
+    category_id = data.get("categoryId", data.get("category_id"))
 
-    user_id= int(get_jwt_identity())
+    if not title or not body or not content_type or not category_id:
+        return jsonify({"error": "title, body, type, and categoryId are required"}), 400
+    if len(title) > 255:
+        return jsonify({"error": "Title is too long"}), 400
 
-    user= User.query.get(user_id)
-    
-    if not user:
-        return jsonify({"error": "User not found"}),404
+    try:
+        category_id = int(category_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "categoryId must be an integer"}), 400
 
-    required = ["title", "type", "category_id"]
-
-    if not all(data.get(field) for field in required):
-        return jsonify({"error": "title, type and category_id are required."}), 400
-
-    category = Category.query.get(data["category_id"])
+    category = db.session.get(Category, category_id)
     if not category:
-        return jsonify({"error":"Category not found"}),404
-    status = "pending"
-        # Auto-approve for admin/tech-writer: pending for regular users
-    new_content = Content(
-        UserID=user_id,
-        Title=data["title"],
-        Description=data.get("description"),
-        ContentType=data["type"],
-        ContentURL= data.get("url"),
-        Status=status,
-        IsApproved=False
-    )  
-   
-    # Add the category through the many-to-many relationship
-    new_content.categories.append(category)
+        return jsonify({"error": "Category not found"}), 404
 
-    db.session.add(new_content)
+    item = Content(
+        UserID=user.UserID,
+        Title=title,
+        Description=body,
+        ContentType=content_type,
+        ContentURL=data.get("mediaUrl", data.get("url")) or None,
+        Summary=data.get("summary"),
+        ThumbnailURL=data.get("thumbnailUrl", data.get("thumbnail_url")),
+        Duration=str(data["duration"]) if data.get("duration") is not None else None,
+        Hashtags=data.get("hashtags"),
+        Status="Draft",
+        IsApproved=False,
+    )
+    item.categories.append(category)
+    db.session.add(item)
     db.session.commit()
+    return jsonify(serialize_content(item)), 201
 
-    return jsonify({
-        "id": new_content.ContentID,
-        "message": "Content submitted successfully"
-    }),201 
 
-#------------------------------ MODIFICATION------
-@content_bp.put("/<int:content_id>")
+@content_bp.patch("/<int:content_id>")
 @jwt_required()
-@role_required("tech_writer")
 def edit_content(content_id):
-    item = Content.query.get_or_404(content_id)
-    current_user = User.query.get(int(get_jwt_identity()))
+    item = db.session.get(Content, content_id)
+    user = _current_user()
+    if not item:
+        return jsonify({"error": "Content not found"}), 404
+    if not user or (item.UserID != user.UserID and not _is_moderator(user)):
+        return jsonify({"error": "Forbidden"}), 403
 
-    if not current_user:
-        return jsonify({
-            "error": "user not found"
-        }),404
-
-    if item.UserID != current_user.UserID:
-        return jsonify({"error": "Forbidden"}),403
-
-    data= request.get_json()
-
-    item.Title=data.get("title",item.Title)
-    item.Description= data.get("description", item.Description)
-    item.ContentURL=data.get("url", item.ContentURL)
-    item.ContentType= data.get("type", item.ContentType)
-    
-    #update category if provided
-    if "category_id" in data:
-        category = Category.query.get(
-            data["category_id"]
-        )
+    data = request.get_json(silent=True) or {}
+    if "title" in data:
+        title = str(data["title"] or "").strip()
+        if not title or len(title) > 255:
+            return jsonify({"error": "Title must be between 1 and 255 characters"}), 400
+        item.Title = title
+    if "body" in data or "description" in data:
+        item.Description = str(data.get("body", data.get("description")) or "").strip()
+        if not item.Description:
+            return jsonify({"error": "Content body cannot be empty"}), 400
+    if "type" in data or "content_type" in data:
+        content_type = _type_value(data.get("type", data.get("content_type")))
+        if not content_type:
+            return jsonify({"error": "Unsupported content type"}), 400
+        item.ContentType = content_type
+    if "mediaUrl" in data or "url" in data:
+        item.ContentURL = data.get("mediaUrl", data.get("url")) or None
+    if "categoryId" in data or "category_id" in data:
+        category = db.session.get(Category, data.get("categoryId", data.get("category_id")))
         if not category:
-            return jsonify({
-                "error": "Category is not found"
-            }) ,404
-        item.categories=[category]   
+            return jsonify({"error": "Category not found"}), 404
+        item.categories = [category]
 
     db.session.commit()
-    return jsonify({"message": "Content updated."}),200
+    return jsonify(serialize_content(item)), 200
 
-#-------------------------- DELETE/REMOVE CONTENT--------
+
 @content_bp.delete("/<int:content_id>")
 @jwt_required()
 def delete_content(content_id):
-    item= Content.query.get_or_404(content_id)
-
-    current_user = User.query.get(int(get_jwt_identity()))
-    if not current_user:
-        return jsonify({
-            "error": "User not found"
-        }),404
-
-    if item.UserID != current_user.UserID and current_user.Role != "admin":
-        return jsonify({"error": "Forbidden."}),403
+    item = db.session.get(Content, content_id)
+    user = _current_user()
+    if not item:
+        return jsonify({"error": "Content not found"}), 404
+    if not user or (item.UserID != user.UserID and normalized_role(user.Role) != "admin"):
+        return jsonify({"error": "Forbidden"}), 403
     db.session.delete(item)
     db.session.commit()
     return jsonify({"message": "Content deleted"}), 200
-
-#------------------------APPROVE CONTENT -----------------
-@content_bp.patch("/<int:content_id>/approve")
-@jwt_required()
-@role_required("admin", "tech_writer")
-def approve_content(content_id):
-    item= Content.query.get_or_404(content_id)
-
-    item.Status="Published"
-    item.IsApproved= True
-
-    db.session.commit()
-
-    _notify_subscribers(item)
-    return jsonify({"message": "Content approved"}),200
-
-#--------------------------------- FLAG CONTENT ------------
-@content_bp.patch("/<int:content_id>/flag")
-@jwt_required()
-@role_required("admin", "tech_writer")
-def flag_content(content_id):
-    item= Content.query.get_or_404(content_id)
-    #The current Content model does not have a Flagged status
-    item.IsApproved =False
-    db.session.commit()
-    
-    return jsonify({"message": "Content flagged."}),200                   
-
-
-
-
-
-        

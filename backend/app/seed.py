@@ -38,7 +38,7 @@ def seed_database():
         print("Seeding users and profiles...")
         users = []
         for i in range(10):
-            role = 'Admin' if i == 0 else 'Member'
+            role = 'admin' if i == 0 else 'user'
 
             user = User(
                 Username=fake.user_name(),
@@ -171,3 +171,10 @@ def seed_database():
         print(f"❌ Error occurred during execution: {e}")
         db.session.rollback()
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    app = create_app("development")
+    with app.app_context():
+        db.create_all()
+        seed_database()

@@ -1,91 +1,67 @@
 # Moringa Daily Dev
 
-A full-stack developer portfolio and social platform built with React (Vite), Node.js (Express), and PostgreSQL.
+A full-stack developer community platform built with React, Vite, Tailwind CSS, Flask, and PostgreSQL (or SQLite for local development).
 
----
-
-## Project Structure
+## Project structure
 
 ```text
 cc2-moringa-daily-dev/
-├── client/         # Frontend React application (Vite + Tailwind CSS)
-└── server/         # Backend Node.js & Express API (PostgreSQL database)
+├── backend/  # Flask API and database migrations
+└── client/   # React frontend
 ```
 
-## Getting Started Locally
-Follow these steps to set up and run the project on your local machine.
+## Local setup
 
-### Prerequisites
-Make sure you have the following installed:
-* **Node.js** (v18 or higher)
-* **PostgreSQL**
+### Backend
 
----
+```bash
+cd backend
+python -m venv .venv
+. .venv/bin/activate       # Windows: .venv\\Scripts\\activate
+pip install -r requirements.txt
+```
 
-## Step-by-Step Setup
+The API defaults to SQLite at `backend/instance/moringa_daily_dev.sqlite3`. To use PostgreSQL, set either `DATABASE_URL` or the documented `DB_*` variables:
 
-### Step 1: Database Setup
+```env
+DATABASE_URL=postgresql+psycopg2://postgres:password@localhost:5432/moringa_daily_dev
+SECRET_KEY=replace-with-a-long-random-value
+JWT_SECRET_KEY=replace-with-a-different-long-random-value
+FRONTEND_URL=http://localhost:5173
+```
 
-1. Log into your PostgreSQL shell:
-   ```bash
-   psql -h localhost -U postgres
-   ```
+Run the API:
 
-2. Create the database:
-   ```sql
-   CREATE DATABASE moringa_daily_dev;
-   ```
+```bash
+python run.py
+```
 
-3. Connect to the database and run your tables/migrations (including profile columns):
-   ```sql
-   ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
-   ALTER TABLE users ADD COLUMN IF NOT EXISTS skills TEXT;
-   ALTER TABLE users ADD COLUMN IF NOT EXISTS github_url TEXT;
-   ```
+The API listens on `http://localhost:5001` by default. Run database migrations when using an existing database:
 
-### Step 2: Backend Setup (`/server`)
+```bash
+flask --app run.py db upgrade
+```
 
-1. Navigate into the server directory:
-   ```bash
-   cd server
-   ```
+Seed data is an explicit operation and is not run automatically when the server starts:
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+```bash
+python -m app.seed
+```
 
-3. Create a `.env` file inside the `server/` folder with the following variables:    
-   ```env
-   PORT=5000
-   DB_USER=postgres
-   DB_PASSWORD=your_db_password
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_NAME=moringa_daily_dev
-   JWT_SECRET=your_super_secret_key   
-   ```
+### Frontend
 
-4. Start the backend server:
-   ```bash
-   node server.js
-   ```
-   *The server will run on http://localhost:5000*
+```bash
+cd client
+npm install
+npm run dev
+```
 
-### Step 3: Frontend Setup (`/client`)
+The Vite development server proxies `/api` requests to `http://localhost:5001`. Set `VITE_API_PROXY_TARGET` to point to another local API. For production, set `VITE_API_BASE_URL` to the public API origin if the API is hosted separately.
 
-1. Open a new terminal tab/window and navigate to the client directory:
-   ```bash
-   cd client
-   ```
+## Canonical API conventions
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the frontend development server:
-   ```bash
-   npm run dev
-   ```
-   *The app will run on http://localhost:5173*
+- JSON uses camelCase fields (`categoryId`, `createdAt`, `mediaUrl`).
+- Content types are `article`, `video`, `audio`, or `image`.
+- Content statuses are `draft`, `published`, or `archived`.
+- Public content endpoints return only approved published content.
+- Admin endpoints are grouped under `/api/admin`.

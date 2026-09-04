@@ -1,11 +1,15 @@
+import os
+
 from app import create_app
 from app.extensions import db
-from app.seed import seed_database
 
-app = create_app(config_class="development")
+
+app = create_app("development")
+
 
 if __name__ == "__main__":
+    # create_all is intentionally limited to bootstrapping a local empty
+    # database; production schema changes should use Flask-Migrate.
     with app.app_context():
         db.create_all()
-        seed_database()
-    app.run(debug=True, port=5001)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5001")))

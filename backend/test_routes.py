@@ -1,126 +1,192 @@
 import pytest
-from app import app, db
-from app.models import Category, Content
+
+from app import create_app
+from app.extensions import db
+from app.models import Category, Profile, User
 
 
 @pytest.fixture
 def client():
-    # Configure app for testing
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app = create_app("testing")
+    with app.app_context():
+        db.create_all()
+        category = Category(Name="Backend", Description="Backend engineering")
+        db.session.add(category)
+        db.session.commit()
 
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
+    with app.test_client() as test_client:
+        yield test_client
 
-            # Seed mock data for testing
-            cat = Category(name='Technology')
-            db.session.add(cat)
-            db.session.commit()
-
-            post = Content(
-                title='Flask Testing Guide',
-                summary='Learning how to test APIs using pytest',
-                category_id=cat.id,
-            )
-            db.session.add(post)
-            db.session.commit()
-
-        yield client
-
-        # Teardown database session and tables
-        with app.app_context():
-            db.session.remove()
-            db.drop_all()
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
 
 
-# --- CATEGORY TESTS ---
-
-
-def test_get_categories(client):
-    """Test retrieving all categories."""
-    response = client.get('/api/categories')
-    assert response.status_code == 200
-    data = response.get_json()
-    assert len(data) == 1
-    category_names = [cat['name'] for cat in data]
-    assert 'Technology' in category_names
-
-
-def test_create_category(client):
-    """Test creating a new category."""
-    payload = {'name': 'Science'}
-    response = client.post('/api/categories', json=payload)
+def register(client, username, email, password="password123"):
+    response = client.post(
+        "/api/auth/register",
+        json={"username": username, "email": email, "password": password},
+    )
     assert response.status_code == 201
-    data = response.get_json()
-    assert data['name'] == 'Science'
-    assert 'id' in data
+    return response.get_json()["token"]
 
 
-def test_create_category_missing_data(client):
-    """Test category creation failure on invalid/missing payload."""
-    response = client.post('/api/categories', json={})
-    assert response.status_code == 400
-
-
-# --- CONTENT TESTS ---
-
-
-def test_get_content(client):
-    """Test retrieving all content posts."""
-    response = client.get('/api/content')
+def login(client, identifier, password="password123"):
+    response = client.post(
+        "/api/auth/login",
+        json={"identifier": identifier, "password": password},
+    )
     assert response.status_code == 200
-    data = response.get_json()
-    assert len(data) == 1
-    assert data[0]['title'] == 'Flask Testing Guide'
+    return response.get_json()["token"]
 
 
-def test_get_single_content(client):
-    """Test retrieving a single content item by ID."""
-    response = client.get('/api/content/1')
+def headers(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
+def make_admin(client):
+    with client.application.app_context():
+        admin = User(
+            Username="admin",
+            Email="admin@example.com",
+            Role="admin",
+            IsActive=True,
+        )
+        admin.password_hash = "password123"
+        db.session.add(admin)
+        db.session.flush()
+        db.session.add(Profile(UserID=admin.UserID))
+        db.session.commit()
+    return login(client, "admin")
+
+
+def test_auth_and_profile(client):
+    token = register(client, "alice", "alice@example.com")
+
+    response = client.get("/api/auth/me", headers=headers(token))
     assert response.status_code == 200
-    data = response.get_json()
-    assert data['title'] == 'Flask Testing Guide'
-    assert data['summary'] == 'Learning how to test APIs using pytest'
+    assert response.get_json()["username"] == "alice"
+
+    response = client.get("/api/profiles/me", headers=headers(token))
+    assert response.status_code == 200
+    assert response.get_json()["user"]["username"] == "alice"
+
+    response = client.put(
+        "/api/profiles/me",
+        headers=headers(token),
+        json={"bio": "Backend developer", "skills": "Python", "githubUrl": "https://github.com/alice"},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["skills"] == "Python"
+    assert response.get_json()["githubUrl"] == "https://github.com/alice"
 
 
-def test_get_single_content_not_found(client):
-    """Test 404 response for non-existent content ID."""
-    response = client.get('/api/content/999')
-    assert response.status_code == 404
+def test_content_lifecycle_and_interactions(client):
+    author_token = register(client, "alice", "alice@example.com")
+    subscriber_token = register(client, "bob", "bob@example.com")
+    admin_token = make_admin(client)
 
-
-def test_create_content(client):
-    """Test creating a new content post."""
-    payload = {
-        'title': 'Pytest Fixtures Overview',
-        'summary': 'Understanding fixture scopes and test isolation',
-        'category_id': 1,
-    }
-    response = client.post('/api/content', json=payload)
+    category_id = client.get("/api/categories").get_json()[0]["id"]
+    response = client.post(
+        "/api/subscriptions",
+        headers=headers(subscriber_token),
+        json={"categoryId": category_id},
+    )
     assert response.status_code == 201
-    data = response.get_json()
-    assert data['title'] == 'Pytest Fixtures Overview'
-    assert data['category_id'] == 1
 
+    response = client.post(
+        "/api/content",
+        headers=headers(author_token),
+        json={
+            "title": "Testing Flask APIs",
+            "body": "A practical guide to API tests.",
+            "type": "article",
+            "categoryId": category_id,
+        },
+    )
+    assert response.status_code == 201
+    content = response.get_json()
+    assert content["status"] == "draft"
+    content_id = content["id"]
 
-def test_update_content(client):
-    """Test updating an existing content post."""
-    payload = {
-        'title': 'Updated Flask Testing Guide',
-        'summary': 'Updated description for testing endpoints',
-    }
-    response = client.put('/api/content/1', json=payload)
+    # Drafts are private until moderation approves them.
+    assert client.get("/api/content").get_json() == []
+    assert client.get(f"/api/content/{content_id}", headers=headers(author_token)).status_code == 200
+
+    response = client.patch(
+        f"/api/admin/content/{content_id}/status",
+        headers=headers(admin_token),
+        json={"status": "published"},
+    )
     assert response.status_code == 200
-    data = response.get_json()
-    assert data['title'] == 'Updated Flask Testing Guide'
+    assert response.get_json()["status"] == "published"
+    assert client.get("/api/content").get_json()[0]["id"] == content_id
 
+    response = client.post(
+        f"/api/content/{content_id}/reactions",
+        headers=headers(author_token),
+        json={"type": "like"},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["likes"] == 1
+    assert client.get(f"/api/content/{content_id}/reactions").get_json()["likes"] == 1
 
-def test_delete_content(client):
-    """Test deleting a content post."""
-    response = client.delete('/api/content/1')
+    response = client.post(
+        f"/api/content/{content_id}/comments",
+        headers=headers(author_token),
+        json={"body": "Helpful article"},
+    )
+    assert response.status_code == 201
+    comment_id = response.get_json()["id"]
+    assert client.get(f"/api/content/{content_id}/comments").get_json()[0]["body"] == "Helpful article"
+
+    response = client.patch(
+        f"/api/comments/{comment_id}",
+        headers=headers(author_token),
+        json={"body": "Updated comment"},
+    )
     assert response.status_code == 200
 
-    # Confirm item no longer exists
-    get_response = client.get('/api/content/1')
-    assert get_response.status_code == 404
+    response = client.post(
+        "/api/wishlist",
+        headers=headers(author_token),
+        json={"contentId": content_id},
+    )
+    assert response.status_code == 201
+    assert client.get("/api/wishlist", headers=headers(author_token)).get_json()[0]["id"] == content_id
+    assert client.delete(f"/api/wishlist/{content_id}", headers=headers(author_token)).status_code == 200
+
+    response = client.post(
+        f"/api/content/{content_id}/report",
+        headers=headers(author_token),
+        json={"reason": "This is a test report"},
+    )
+    assert response.status_code == 201
+    assert client.get("/api/admin/reports", headers=headers(admin_token)).status_code == 200
+
+    response = client.patch(
+        f"/api/admin/reports/{response.get_json()['id']}",
+        headers=headers(admin_token),
+    )
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "resolved"
+
+    notifications = client.get("/api/notifications", headers=headers(subscriber_token))
+    assert notifications.status_code == 200
+    assert len(notifications.get_json()) == 1
+
+
+def test_admin_and_subscription_authorization(client):
+    user_token = register(client, "alice", "alice@example.com")
+    category_id = client.get("/api/categories").get_json()[0]["id"]
+
+    assert client.get("/api/admin/users", headers=headers(user_token)).status_code == 403
+    assert client.post(
+        "/api/subscriptions",
+        headers=headers(user_token),
+        json={"categoryId": category_id},
+    ).status_code == 201
+    assert client.get("/api/subscriptions", headers=headers(user_token)).get_json()[0]["categoryId"] == category_id
+    assert client.delete(
+        f"/api/subscriptions/{category_id}", headers=headers(user_token)
+    ).status_code == 200

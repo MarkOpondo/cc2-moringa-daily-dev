@@ -1,7 +1,7 @@
 """Add Duration column to content table
 
 Revision ID: 7760eec6ebb1
-Revises: 
+Revises: 000000000001
 Create Date: 2026-08-25 05:21:24.438385
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '7760eec6ebb1'
-down_revision = None
+down_revision = "000000000001"
 branch_labels = None
 depends_on = None
 

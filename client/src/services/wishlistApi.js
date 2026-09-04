@@ -1,32 +1,23 @@
 import apiRequest from "./api";
 
 export async function listWishlist() {
-  return apiRequest("/api/users/me/wishlist");
+  return apiRequest("/api/wishlist");
 }
 
 export async function addToWishlist(contentId) {
   return apiRequest("/api/wishlist", {
     method: "POST",
-    body: JSON.stringify({
-      content_id: contentId,
-    }),
+    body: JSON.stringify({ contentId }),
   });
 }
 
 export async function removeFromWishlist(contentId) {
-  return apiRequest(`/api/wishlist/${contentId}`, {
-    method: "DELETE",
-  });
+  return apiRequest(`/api/wishlist/${contentId}`, { method: "DELETE" });
 }
 
 export async function isWishlisted(contentId) {
   const items = await listWishlist();
-
-  return items.some(
-    (item) =>
-      String(item.contentId ?? item.content_id ?? item.ContentID) ===
-      String(contentId)
-  );
+  return items.some((item) => String(item.id) === String(contentId));
 }
 
 export async function toggleWishlist(contentId, currentlyWishlisted) {
@@ -34,7 +25,6 @@ export async function toggleWishlist(contentId, currentlyWishlisted) {
     await removeFromWishlist(contentId);
     return false;
   }
-
   await addToWishlist(contentId);
   return true;
 }

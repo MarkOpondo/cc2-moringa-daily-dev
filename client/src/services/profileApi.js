@@ -5,20 +5,18 @@ export async function getProfile() {
 }
 
 export async function fetchProfile() {
-  return getProfile();
+  const data = await getProfile();
+  return {
+    ...data,
+    ...(data.user || {}),
+    github_url: data.githubUrl,
+    profile_image: data.profileImage,
+  };
 }
 
-export async function updateProfile({
-  bio,
-  interests,
-  profileImage,
-}) {
+export async function updateProfile({ bio, interests, profileImage, skills, githubUrl }) {
   return apiRequest("/api/profiles/me", {
     method: "PUT",
-    body: JSON.stringify({
-      bio,
-      interests,
-      profile_image: profileImage,
-    }),
+    body: JSON.stringify({ bio, interests, profileImage, skills, githubUrl }),
   });
 }

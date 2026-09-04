@@ -1,132 +1,63 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from sqlalchemy.exc import IntegrityError
+
 from app.extensions import db
-from app.models import User, Profile
-from app.utils import role_required
+from app.models import User
+from app.serializers import serialize_user
+
 
 users_bp = Blueprint("users", __name__)
 
-#--------------------- ADMIN ROUTES--------------
-@users_bp.get("")
-@jwt_required()
-@role_required("admin")
-def list_all_users():
-    users = User.query.all()
-    return jsonify([{
-        "id": user.UserID,
-        "username": user.Username,
-        "email": user.Email,
-        "role": user.Role,
-        "is_active": user.IsActive
-    } for user in users]),200
 
-@users_bp.post("")   
-@jwt_required()
-@role_required("admin")
-def admin_add_user():
-    data = request.get_json() 
-    if not data:
-        return jsonify({
-            "error": "Request body is required"
-        }), 400
+def _current_user():
+    return db.session.get(User, int(get_jwt_identity()))
 
-    if not all ([
-        data.get("username"),
-         data.get("email"), 
-         data.get("password")]):
 
-        return jsonify({"error": "Username, email and password are required"}), 400
-    existing = User.query.filter(
-        (User.Username == data["username"]) | (User.Email ==  data["email"])
-    ).first()
-    
-    if existing:
-        return jsonify({"error": "Username or email already exists"}), 409
-
-    new_user= User(
-        Username = data["username"],
-        Email=data["email"],
-        Role=data.get("role", "user"),
-        IsActive=True
-    )    
-    new_user.password_hash=data["password"]
-    db.session.add(new_user)
-    db.session.flush()
-
-    db.session.add(Profile(UserID=new_user.UserID))
-    db.session.commit()
-
-    return jsonify({
-        "message": "User added successfully",
-        "user_id": new_user.UserID
-    }), 201
-
-@users_bp.patch("/<int:user_id>/deactivate")
-@jwt_required()
-@role_required("admin")
-def deactivate_user(user_id):
-    user= User.query.get_or_404(user_id)
-    user.IsActive = not user.IsActive
-    db.session.commit()
-    return jsonify({
-        "message": f"User '{user.Username}' has been deactivated."}),200
-
-#--------------------------CURRENT USER ROUTES -------
 @users_bp.get("/me")
 @jwt_required()
 def get_current_user():
-    user= User.query.get(int(get_jwt_identity()))
-
+    user = _current_user()
     if not user:
-        return jsonify({"error": "User not found."}),404
+        return jsonify({"error": "User not found"}), 404
+    return jsonify(serialize_user(user)), 200
 
-    return jsonify({
-        "id": user.UserID,
-        "username": user.Username,
-        "email": user.Email,
-        "role": user.Role,
-        "is_active": user.IsActive
-    }),200  
 
 @users_bp.put("/me")
 @jwt_required()
 def update_current_user():
-    user = User.query.get(int(get_jwt_identity()))
+    user = _current_user()
     if not user:
-        return jsonify({
-            "error": "User not found"
-        }),404
+        return jsonify({"error": "User not found"}), 404
 
-    data = request.get_json()
-
-    if not data:
-        return jsonify({"error": "Request body is required" }),400
-
+    data = request.get_json(silent=True) or {}
     if "username" in data:
-        # Checks for the uniqueness
-        existing_username = User.query.filter(
-            User.Username == data["username"],
-            User.UserID != user.UserID
+        username = str(data["username"] or "").strip()
+        if not username:
+            return jsonify({"error": "Username cannot be empty"}), 400
+        duplicate = User.query.filter(
+            User.Username == username, User.UserID != user.UserID
         ).first()
-
-        if existing_username:
-            return jsonify({"error": "Username already taken"}),200
-        user.Username= data["username"]
-
+        if duplicate:
+            return jsonify({"error": "Username already taken"}), 409
+        user.Username = username
     if "email" in data:
-        existing_email= User.query.filter(
-            User.Email==data["email"],
-            User.UserID!= user.UserID
+        email = str(data["email"] or "").strip().lower()
+        duplicate = User.query.filter(
+            User.Email == email, User.UserID != user.UserID
         ).first()
-        if existing_email:
-            return jsonify({
-                "error": "Email already taken"
-            }),409
-        user.Email=data["email"]
-
+        if duplicate:
+            return jsonify({"error": "Email already taken"}), 409
+        user.Email = email
     if "password" in data:
-         user.password_hash=data["password"]
+        password = data["password"] or ""
+        if not isinstance(password, str) or len(password) < 8:
+            return jsonify({"error": "Password must be at least 8 characters"}), 400
+        user.password_hash = password
 
-    db.session.commit()
-
-    return jsonify({"message": "Account has been updated successfully"}),200                
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "Username or email already exists"}), 409
+    return jsonify(serialize_user(user)), 200

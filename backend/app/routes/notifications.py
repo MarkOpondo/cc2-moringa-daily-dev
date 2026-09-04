@@ -1,54 +1,51 @@
 from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from app.extensions import db
 from app.models import Notification
 
+
 notifications_bp = Blueprint("notifications", __name__)
+
+
+def _payload(notification):
+    return {
+        "id": notification.NotificationID,
+        "message": notification.Message,
+        "isRead": bool(notification.IsRead),
+        "contentId": notification.ContentID,
+        "createdAt": notification.CreatedAt.isoformat() if notification.CreatedAt else None,
+    }
+
 
 @notifications_bp.get("")
 @jwt_required()
 def get_notifications():
-    notifs = Notification.query.filter_by(
-        UserID=int(get_jwt_identity())
-    ).order_by(Notification.CreatedAt.desc()).all()
+    user_id = int(get_jwt_identity())
+    notifications = Notification.query.filter_by(UserID=user_id).order_by(
+        Notification.CreatedAt.desc()
+    ).all()
+    return jsonify([_payload(notification) for notification in notifications]), 200
 
-    return jsonify([{
-        "id": notification.NotificationID,
-        "message": notification.Message,
-        "is_read": notification.IsRead,
-        "created_at": (
-            notification.CreatedAt.isoformat()
-             if notification.CreatedAt 
-             else None
-             ),
-    }for notification in notifs]),200
-#--------------------- MARK AS READ -------------------
+
 @notifications_bp.patch("/<int:notification_id>/read")
 @jwt_required()
 def mark_as_read(notification_id):
-
-    notif = Notification.query.get_or_404(notification_id)
-
-    if notif.UserID != int(get_jwt_identity()):
-        return jsonify({"error": "Forbidden"}),403
-    notif.IsRead=True
+    notification = Notification.query.filter_by(
+        NotificationID=notification_id, UserID=int(get_jwt_identity())
+    ).first()
+    if not notification:
+        return jsonify({"error": "Notification not found"}), 404
+    notification.IsRead = True
     db.session.commit()
-    return jsonify({
-        "message": "Notification marked as read. "}), 200    
+    return jsonify(_payload(notification)), 200
 
-#------------------------------ MARK ALL AS READ-------------------
+
 @notifications_bp.patch("/read-all")
 @jwt_required()
 def mark_all_as_read():
-    user_id = int(get_jwt_identity())
-
-    notifications = Notification.query.filter_by(
-        UserID=user_id,
-        IsRead=False
-    ).all()
-    for notification in notifications:
-        notification.IsRead =True
+    Notification.query.filter_by(UserID=int(get_jwt_identity()), IsRead=False).update(
+        {Notification.IsRead: True}, synchronize_session=False
+    )
     db.session.commit()
-    return jsonify({
-        "message": "All notifications marked as read"
-    }),200   
+    return jsonify({"message": "All notifications marked as read"}), 200
