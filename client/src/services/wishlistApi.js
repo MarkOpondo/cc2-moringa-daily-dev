@@ -1,18 +1,22 @@
 import apiRequest from "./api";
 
 export async function listWishlist() {
-  return apiRequest("/api/wishlist");
+  return apiRequest("/api/wishlist", { requiresAuth: true });
 }
 
 export async function addToWishlist(contentId) {
   return apiRequest("/api/wishlist", {
     method: "POST",
+    requiresAuth: true,
     body: JSON.stringify({ contentId }),
   });
 }
 
 export async function removeFromWishlist(contentId) {
-  return apiRequest(`/api/wishlist/${contentId}`, { method: "DELETE" });
+  return apiRequest(`/api/wishlist/${contentId}`, {
+    method: "DELETE",
+    requiresAuth: true,
+  });
 }
 
 export async function isWishlisted(contentId) {

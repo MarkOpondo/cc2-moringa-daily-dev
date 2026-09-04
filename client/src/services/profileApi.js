@@ -1,7 +1,7 @@
 import apiRequest from "./api";
 
 export async function getProfile() {
-  return apiRequest("/api/profiles/me");
+  return apiRequest("/api/profiles/me", { requiresAuth: true });
 }
 
 export async function fetchProfile() {
@@ -17,6 +17,7 @@ export async function fetchProfile() {
 export async function updateProfile({ bio, interests, profileImage, skills, githubUrl }) {
   return apiRequest("/api/profiles/me", {
     method: "PUT",
+    requiresAuth: true,
     body: JSON.stringify({ bio, interests, profileImage, skills, githubUrl }),
   });
 }

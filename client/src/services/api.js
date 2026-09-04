@@ -2,6 +2,12 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, ""
 
 export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem("token");
+  const requiresAuth = options.requiresAuth === true;
+
+  if (requiresAuth && !token) {
+    throw new Error("Please log in to continue.");
+  }
+
   const headers = {
     ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     ...(options.headers || {}),
@@ -11,8 +17,10 @@ export async function apiRequest(endpoint, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
+  const requestOptions = { ...options };
+  delete requestOptions.requiresAuth;
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
+    ...requestOptions,
     headers,
   });
 

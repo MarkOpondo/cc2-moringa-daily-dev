@@ -16,6 +16,7 @@ export async function getContent(id) {
 export async function createContent({ title, body, type, mediaUrl, categoryId }) {
   return apiRequest("/api/content", {
     method: "POST",
+    requiresAuth: true,
     body: JSON.stringify({ title, body, type, mediaUrl: mediaUrl || null, categoryId }),
   });
 }
@@ -23,17 +24,22 @@ export async function createContent({ title, body, type, mediaUrl, categoryId })
 export async function updateContent(id, values) {
   return apiRequest(`/api/content/${id}`, {
     method: "PATCH",
+    requiresAuth: true,
     body: JSON.stringify(values),
   });
 }
 
 export async function deleteContent(id) {
-  return apiRequest(`/api/content/${id}`, { method: "DELETE" });
+  return apiRequest(`/api/content/${id}`, {
+    method: "DELETE",
+    requiresAuth: true,
+  });
 }
 
 export async function react(contentId, type) {
   return apiRequest(`/api/content/${contentId}/reactions`, {
     method: "POST",
+    requiresAuth: true,
     body: JSON.stringify({ type }),
   });
 }

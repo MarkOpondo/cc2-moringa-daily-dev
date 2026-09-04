@@ -7,6 +7,7 @@ export async function listCategories() {
 export async function createCategory({ name, description }) {
   return apiRequest("/api/categories", {
     method: "POST",
+    requiresAuth: true,
     body: JSON.stringify({ name, description }),
   });
 }
@@ -14,10 +15,14 @@ export async function createCategory({ name, description }) {
 export async function updateCategory(id, { name, description }) {
   return apiRequest(`/api/categories/${id}`, {
     method: "PATCH",
+    requiresAuth: true,
     body: JSON.stringify({ name, description }),
   });
 }
 
 export async function deleteCategory(id) {
-  return apiRequest(`/api/categories/${id}`, { method: "DELETE" });
+  return apiRequest(`/api/categories/${id}`, {
+    method: "DELETE",
+    requiresAuth: true,
+  });
 }
